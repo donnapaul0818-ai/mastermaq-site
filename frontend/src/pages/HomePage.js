@@ -525,7 +525,7 @@ export default function HomePage() {
 
         {/* Background photo */}
         <div className="absolute inset-0 z-0">
-          <img src="/images/hero-bg.png" alt="" className="w-full h-full object-cover opacity-[0.30]" />
+          <img src="/images/hero-bg-original.png" alt="" className="w-full h-full object-cover opacity-[0.30]" />
         </div>
 
         {/* === LUZ DIRECIONAL — gradientes puros, sem beams retos === */}
