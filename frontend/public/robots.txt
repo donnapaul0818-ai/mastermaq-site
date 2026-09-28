@@ -1,0 +1,29 @@
+# robots.txt - Mastermaq Assistência Técnica
+User-agent: *
+Allow: /
+
+# Áreas privadas / autenticadas
+Disallow: /minha-conta
+Disallow: /login
+Disallow: /cadastro
+
+# AI crawlers
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+Sitemap: https://mastermaqassistencia.com.br/sitemap.xml

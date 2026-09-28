@@ -1,0 +1,44 @@
+# Mastermaq Assistência Técnica
+
+> Assistência técnica autorizada em Belo Horizonte/MG, com mais de 30 anos de experiência no conserto e manutenção de eletrodomésticos e sistemas de climatização. Atendimento com peças originais e técnicos homologados.
+
+## Sobre a empresa
+
+- Nome: Mastermaq Assistência Técnica
+- CNPJ: 19.955.560/0001-28
+- Endereço: R. Descalvado, 636A - Renascença, Belo Horizonte/MG, CEP 31130-610
+- Telefone: (31) 3422-5293
+- E-mail: mastermaqassistencia@gmail.com
+- Horário: Segunda a Sexta, 09:00 às 18:00
+- Site: https://mastermaqassistencia.com.br
+- Nota Google: 4.1 (134 avaliações)
+
+## Serviços
+
+- Conserto e manutenção de geladeiras
+- Conserto de lava e seca e lavadoras
+- Ar condicionado split e portátil
+- Sistemas VRF Hisense (projeto, instalação e manutenção)
+- Freezers, coifas, cooktops, lava-louças, fornos elétricos, micro-ondas, frigobares, cervejeiras, máquinas de gelo, trituradores
+
+## Marcas autorizadas
+
+- HQ, Franke, Hisense, Gorenje, Bertazzoni, Lofra, Panasonic, Elettromec, Viking 
+
+## Como funciona
+
+1. Solicite um orçamento pelo site, telefone ou WhatsApp.
+2. É gerada uma Ordem de Serviço (OS) com número de acompanhamento.
+3. Acompanhe o status no Portal do Cliente.
+
+## Páginas principais
+
+- [Home](https://mastermaqassistencia.com.br/): apresentação e principais serviços
+- [Serviços](https://mastermaqassistencia.com.br/servicos): lista de serviços por tipo de equipamento
+- [VRF Hisense](https://mastermaqassistencia.com.br/vrf-hisense): landing dedicada a sistemas VRF Hisense
+- [Sobre](https://mastermaqassistencia.com.br/sobre): história, missão e valores
+- [Contato](https://mastermaqassistencia.com.br/contato): endereço, telefone e formulário
+- [Blog](https://mastermaqassistencia.com.br/blog): dicas e conteúdos sobre manutenção
+
+## Observações
+- "Dentro de garantia" só se aplica às marcas autorizadas listadas acima.

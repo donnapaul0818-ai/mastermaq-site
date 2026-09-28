@@ -1352,6 +1352,70 @@ async def startup():
     except Exception:
         pass
 
+# ---------------- Rate limiting (in-memory sliding window per IP) ----------------
+import time as _rl_time
+from collections import defaultdict as _rl_defaultdict, deque as _rl_deque
+from fastapi.responses import JSONResponse as _RLJSONResponse
+
+_RL_BUCKETS = _rl_defaultdict(_rl_deque)  # key -> deque[timestamps]
+
+# (max_requests, window_seconds) por categoria
+_RL_RULES = {
+    "auth": (15, 60),      # login / register / google
+    "chat": (90, 60),      # Mi chat / voice (SSE + polling)
+    "write": (60, 60),     # POST/PUT/PATCH/DELETE
+    "default": (200, 60),  # GET geral
+}
+
+
+def _rl_client_ip(request: Request) -> str:
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _rl_category(request: Request) -> str:
+    path = request.url.path
+    if path.startswith(("/api/auth/login", "/api/auth/register", "/api/auth/google")):
+        return "auth"
+    if path.startswith("/api/chat"):
+        return "chat"
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        return "write"
+    return "default"
+
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    path = request.url.path
+    # Só limita rotas /api; ignora preflight e o webhook externo (auth própria via X-API-Key)
+    if (
+        not path.startswith("/api")
+        or request.method == "OPTIONS"
+        or path.startswith("/api/external/webhook")
+    ):
+        return await call_next(request)
+
+    cat = _rl_category(request)
+    max_req, window = _RL_RULES[cat]
+    ip = _rl_client_ip(request)
+    key = f"{cat}:{ip}"
+    now = _rl_time.time()
+    bucket = _RL_BUCKETS[key]
+    while bucket and now - bucket[0] > window:
+        bucket.popleft()
+    if len(bucket) >= max_req:
+        retry_after = int(window - (now - bucket[0])) + 1
+        return _RLJSONResponse(
+            status_code=429,
+            content={"detail": "Muitas requisições. Aguarde alguns instantes e tente novamente."},
+            headers={"Retry-After": str(retry_after)},
+        )
+    bucket.append(now)
+    return await call_next(request)
+
+
 app.include_router(api_router)
 
 cors_origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000")

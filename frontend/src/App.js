@@ -7,6 +7,7 @@ import { Toaster } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import MiChatWidget from "@/components/MiChatWidget";
+import RouteSEO from "@/components/RouteSEO";
 import HomePage from "@/pages/HomePage";
 import ServicesPage from "@/pages/ServicesPage";
 import AboutPage from "@/pages/AboutPage";
@@ -57,6 +58,7 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <ScrollToTop />
+          <RouteSEO />
           <div className="min-h-screen flex flex-col">
             <Header />
             <main className="flex-1">
