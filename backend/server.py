@@ -85,9 +85,12 @@ class RegisterRequest(BaseModel):
     password: str
     name: str
     phone: str = ""
+    phone2: str = ""
     cep: str = ""
     address: str = ""
     number: str = ""
+    complement: str = ""
+    reference_point: str = ""
     neighborhood: str = ""
     city: str = ""
     state: str = ""
@@ -163,9 +166,12 @@ async def register(data: RegisterRequest, response: Response):
         "password_hash": hash_password(data.password),
         "name": data.name,
         "phone": data.phone,
+        "phone2": data.phone2,
         "cep": data.cep,
         "address": data.address,
         "number": data.number,
+        "complement": data.complement,
+        "reference_point": data.reference_point,
         "neighborhood": data.neighborhood,
         "city": data.city,
         "state": data.state,
@@ -333,7 +339,7 @@ async def refresh_token_endpoint(request: Request, response: Response):
 async def update_profile(request: Request):
     user = await get_current_user(request)
     body = await request.json()
-    allowed = ["name", "phone", "cep", "address", "number", "neighborhood", "city", "state"]
+    allowed = ["name", "phone", "phone2", "cep", "address", "number", "complement", "reference_point", "neighborhood", "city", "state"]
     update_data = {k: v for k, v in body.items() if k in allowed}
     if update_data:
         await db.users.update_one({"_id": ObjectId(user["_id"])}, {"$set": update_data})
@@ -353,6 +359,140 @@ async def get_brands():
 @api_router.get("/equipment/rules")
 async def get_rules():
     return {"installation_disabled": INSTALLATION_DISABLED}
+
+# ── Supabase (external system DB — single source of truth for OS) ────
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+
+# Fields NOT shown to the customer in "Ver Detalhes" (laudo/técnico/internos)
+OS_EXCLUDED_FIELDS = {
+    "priority", "status_orcamento", "conclusao_orcamento", "technical_diagnosis",
+    "required_parts", "installation_correct", "technician",
+    "voltage_f1f2", "voltage_f1_terra", "voltage_f2_terra",
+    "photo_1", "photo_2", "photo_3", "photo_4", "photo_5",
+    "photo_6", "photo_7", "photo_8", "photo_9",
+    "signature_customer", "signature_technician", "signature_client",
+    "signature_client_name", "signature_client_cpf", "signature_date", "signature_tech_name",
+    "assinafy_status", "assinafy_document_id", "scheduling_history",
+    "print_count", "share_token", "sort_date", "lat", "lng", "id", "batch", "micro_status",
+}
+
+# Fields the CUSTOMER may edit on their own OS
+OS_CUSTOMER_EDITABLE = {
+    "customer_name", "email", "cep", "address", "number", "neighborhood",
+    "city", "state", "complement", "reference_point", "phone1",
+}
+
+
+def _sb_headers(extra: dict = None):
+    h = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
+    }
+    if extra:
+        h.update(extra)
+    return h
+
+
+async def _sb_request(method: str, path: str, params: dict = None, json_body=None, headers_extra: dict = None):
+    """Run a PostgREST call against Supabase in a thread (requests is sync)."""
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        raise HTTPException(status_code=500, detail="Supabase não configurado")
+    url = f"{SUPABASE_URL}/rest/v1/{path}"
+
+    def _do():
+        import requests as _req
+        return _req.request(
+            method, url, params=params, json=json_body,
+            headers=_sb_headers(headers_extra), timeout=15,
+        )
+    loop = asyncio.get_event_loop()
+    resp = await loop.run_in_executor(None, _do)
+    return resp
+
+
+async def sb_get_orders_by_email(email: str) -> list:
+    email = (email or "").strip()
+    if not email:
+        return []
+    # ilike (no wildcards) = case-insensitive exact match
+    resp = await _sb_request(
+        "GET", "service_orders",
+        params={
+            "email": f"ilike.{email}",
+            "select": "*",
+            "order": "created_at.desc",
+            "limit": "200",
+        },
+    )
+    if resp.status_code != 200:
+        logger.warning(f"[supabase] list by email failed {resp.status_code}: {resp.text[:200]}")
+        return []
+    try:
+        return resp.json()
+    except Exception:
+        return []
+
+
+async def sb_get_order(os_number: str) -> Optional[dict]:
+    resp = await _sb_request(
+        "GET", "service_orders",
+        params={"os_number": f"eq.{os_number}", "select": "*", "limit": "1"},
+    )
+    if resp.status_code != 200:
+        return None
+    try:
+        rows = resp.json()
+        return rows[0] if rows else None
+    except Exception:
+        return None
+
+
+async def sb_update_order(os_number: str, fields: dict) -> Optional[dict]:
+    fields = dict(fields)
+    fields["updated_at"] = datetime.now(timezone.utc).isoformat()
+    resp = await _sb_request(
+        "PATCH", "service_orders",
+        params={"os_number": f"eq.{os_number}"},
+        json_body=fields,
+        headers_extra={"Prefer": "return=representation"},
+    )
+    if resp.status_code not in (200, 204):
+        logger.warning(f"[supabase] update failed {resp.status_code}: {resp.text[:200]}")
+        raise HTTPException(status_code=502, detail="Falha ao atualizar OS no sistema")
+    try:
+        rows = resp.json()
+        return rows[0] if rows else None
+    except Exception:
+        return None
+
+
+def _normalize_os_for_card(row: dict) -> dict:
+    """Slim view used in the portal list / cards."""
+    return {
+        "os_number": row.get("os_number"),
+        "external_os_number": row.get("os_number"),
+        "product": row.get("product"),
+        "equipment_type": row.get("product"),
+        "brand": row.get("brand"),
+        "service_type": row.get("service_type"),
+        "status": row.get("status"),
+        "sub_status": row.get("sub_status"),
+        "created_at": row.get("created_at") or row.get("registration_date"),
+        "defect_description": row.get("reported_defect"),
+        "model": row.get("model"),
+    }
+
+
+def _normalize_os_detail(row: dict) -> dict:
+    """Full detail view minus técnico/laudo fields; adds friendly aliases."""
+    out = {k: v for k, v in row.items() if k not in OS_EXCLUDED_FIELDS}
+    out["equipment_type"] = row.get("product")
+    out["defect_description"] = row.get("reported_defect")
+    out["external_os_number"] = row.get("os_number")
+    return out
+
 
 # ── Service Orders ───────────────────────────────────────────────────
 def _service_type_external_label(st: str, warranty_status: str = "") -> str:
@@ -416,10 +556,11 @@ async def _push_to_external_system(order_doc: dict, user_doc: Optional[dict]) ->
         observation_parts.append(f"Defeito relatado: {defect_text}")
 
     phone_digits = _digits(user.get("phone") or order_doc.get("user_phone") or "")
+    phone2_digits = _digits(user.get("phone2") or "")
     payload = {
         "customer_name": order_doc.get("user_name") or user.get("name") or "Cliente Site",
         "phone1": phone_digits,
-        "phone2": phone_digits,
+        "phone2": phone2_digits or phone_digits,
         "address": user.get("address") or "",
         "number": user.get("number") or "",
         "neighborhood": user.get("neighborhood") or "",
@@ -437,8 +578,10 @@ async def _push_to_external_system(order_doc: dict, user_doc: Optional[dict]) ->
             order_doc.get("service_type", ""),
             order_doc.get("warranty_status", ""),
         ),
-        "reference_point": "",
-        "complement": "",
+        "reference_point": user.get("reference_point") or "",
+        "complement": user.get("complement") or "",
+        "source": "site",
+        "visit_fee": "150.0",
     }
     # Require customer_name and phone1 per external spec
     if not payload["customer_name"] or not payload["phone1"]:
@@ -502,35 +645,25 @@ async def _sync_order_to_external(os_number: str, order_doc: dict, user_doc: Opt
 
 
 @api_router.post("/service-orders", status_code=201)
-async def create_service_order(data: ServiceOrderCreate, request: Request, background_tasks: BackgroundTasks):
-    user_id = None
-    user_email = None
-    user_name = None
-    user_doc = None
-    try:
-        user = await get_current_user(request)
-        user_id = user["_id"]
-        user_email = user.get("email")
-        user_name = user.get("name")
-        user_doc = user
-    except Exception:
-        pass
-    # Gate: creating an OS requires a complete profile (name + phone) so the
-    # external Mastermaq Systems API can accept the payload. Without this,
-    # the OS is created locally but never reaches the partner system.
-    if user_doc:
-        phone_digits = "".join(ch for ch in (user_doc.get("phone") or "") if ch.isdigit())
-        if len(phone_digits) < 10 or not (user_doc.get("name") or "").strip():
-            raise HTTPException(
-                status_code=400,
-                detail="Complete seu perfil (nome e telefone) antes de abrir uma OS.",
-            )
-    os_number = generate_os_number()
+async def create_service_order(data: ServiceOrderCreate, request: Request):
+    """Create an OS by pushing to the external Mastermaq Systems API, which
+    assigns the sequential number and persists it in Supabase (single source
+    of truth). The site only READS from Supabase afterwards."""
+    user = await get_current_user(request)  # login required
+    user_doc = dict(user)
+
+    # Gate: complete profile (name + phone) required for the external API.
+    phone_digits = "".join(ch for ch in (user_doc.get("phone") or "") if ch.isdigit())
+    if len(phone_digits) < 10 or not (user_doc.get("name") or "").strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Complete seu perfil (nome e telefone) antes de abrir uma OS.",
+        )
+
     order_doc = {
-        "os_number": os_number,
-        "user_id": user_id,
-        "user_email": user_email,
-        "user_name": user_name,
+        "os_number": "",
+        "user_email": user_doc.get("email"),
+        "user_name": user_doc.get("name"),
         "equipment_type": data.equipment_type,
         "brand": data.brand,
         "service_type": data.service_type,
@@ -538,32 +671,36 @@ async def create_service_order(data: ServiceOrderCreate, request: Request, backg
         "serial_number": data.serial_number,
         "warranty_status": data.warranty_status,
         "defect_description": data.defect_description,
-        "status": "Aguardando Análise A.T",
-        "visit_fee": "A definir",
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
-    await db.service_orders.insert_one(order_doc)
+    user_snapshot = dict(user_doc)
+    user_snapshot.pop("_id", None)
+    user_snapshot.pop("password_hash", None)
 
-    # Fire-and-forget: push to the external Mastermaq Systems API in the
-    # background so the user receives the OS confirmation immediately, even
-    # if the external API is slow or temporarily unavailable. The outcome is
-    # persisted on the local OS and the client can see it via polling.
-    snapshot = dict(order_doc); snapshot.pop("_id", None)
-    user_snapshot = dict(user_doc) if user_doc else None
-    if user_snapshot:
-        user_snapshot.pop("_id", None)
-        user_snapshot.pop("hashed_password", None)
-    background_tasks.add_task(_sync_order_to_external, os_number, snapshot, user_snapshot)
+    ext = await _push_to_external_system(order_doc, user_snapshot)
+    if not ext.get("ok"):
+        logger.warning(f"[create-os] external push failed: {ext.get('error')} status={ext.get('status_code')}")
+        raise HTTPException(status_code=502, detail="Não foi possível registrar a OS no sistema. Tente novamente.")
 
-    order_doc.pop("_id", None)
-    return order_doc
+    ext_data = ext.get("data") if isinstance(ext.get("data"), dict) else {}
+    external_os = str(ext_data.get("os_number") or ext_data.get("id") or "")
+
+    return {
+        "os_number": external_os,
+        "external_os_number": external_os,
+        "product": _equipment_name(data.equipment_type),
+        "equipment_type": _equipment_name(data.equipment_type),
+        "brand": data.brand,
+        "service_type": _service_type_external_label(data.service_type, data.warranty_status),
+        "status": "Aguardando Analise A.T",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
 
 @api_router.get("/service-orders")
 async def list_service_orders(request: Request):
+    """List the logged-in customer's OS from Supabase (matched by email)."""
     user = await get_current_user(request)
-    orders = await db.service_orders.find({"user_id": user["_id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
-    return orders
+    rows = await sb_get_orders_by_email(user.get("email") or "")
+    return [_normalize_os_for_card(r) for r in rows]
 
 
 @api_router.post("/admin/service-orders/resync")
@@ -606,11 +743,270 @@ async def admin_resync_failed_orders(request: Request, background_tasks: Backgro
     return {"queued": len(to_retry), "orders": to_retry}
 
 @api_router.get("/service-orders/{os_number}")
-async def get_service_order(os_number: str):
-    order = await db.service_orders.find_one({"os_number": os_number}, {"_id": 0})
-    if not order:
-        raise HTTPException(status_code=404, detail="Service order not found")
-    return order
+async def get_service_order(os_number: str, request: Request):
+    """Full OS detail from Supabase (minus técnico/laudo fields). Only the
+    owner (email match) or an admin may view it."""
+    user = await get_current_user(request)
+    row = await sb_get_order(os_number)
+    if not row:
+        raise HTTPException(status_code=404, detail="Ordem de serviço não encontrada")
+    owner_email = (row.get("email") or "").strip().lower()
+    user_email = (user.get("email") or "").strip().lower()
+    if user.get("role") != "admin" and owner_email and owner_email != user_email:
+        raise HTTPException(status_code=403, detail="Acesso negado a esta OS")
+    return _normalize_os_detail(row)
+
+
+class ServiceOrderUpdate(BaseModel):
+    customer_name: Optional[str] = None
+    email: Optional[str] = None
+    cep: Optional[str] = None
+    address: Optional[str] = None
+    number: Optional[str] = None
+    neighborhood: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    complement: Optional[str] = None
+    reference_point: Optional[str] = None
+    phone1: Optional[str] = None
+
+
+@api_router.put("/service-orders/{os_number}")
+async def update_service_order(os_number: str, data: ServiceOrderUpdate, request: Request):
+    """Customer edits allowed fields on a single OS directly in Supabase."""
+    user = await get_current_user(request)
+    row = await sb_get_order(os_number)
+    if not row:
+        raise HTTPException(status_code=404, detail="Ordem de serviço não encontrada")
+    owner_email = (row.get("email") or "").strip().lower()
+    user_email = (user.get("email") or "").strip().lower()
+    if user.get("role") != "admin" and owner_email and owner_email != user_email:
+        raise HTTPException(status_code=403, detail="Acesso negado a esta OS")
+
+    incoming = {k: v for k, v in data.dict().items() if v is not None and k in OS_CUSTOMER_EDITABLE}
+    if not incoming:
+        raise HTTPException(status_code=400, detail="Nenhum campo válido para atualizar")
+
+    updated = await sb_update_order(os_number, incoming)
+    if updated:
+        return _normalize_os_detail(updated)
+    row2 = await sb_get_order(os_number)
+    return _normalize_os_detail(row2 or row)
+
+
+# ── Payments (Mercado Pago Checkout Pro) ────────────────────────────
+MP_ACCESS_TOKEN = os.environ.get("MERCADOPAGO_ACCESS_TOKEN", "").strip()
+MP_PUBLIC_KEY = os.environ.get("MERCADOPAGO_PUBLIC_KEY", "").strip()
+MP_WEBHOOK_SECRET = os.environ.get("MERCADOPAGO_WEBHOOK_SECRET", "").strip()
+PUBLIC_APP_URL = os.environ.get("PUBLIC_APP_URL", "").rstrip("/")
+MP_API = "https://api.mercadopago.com"
+
+
+def _mp_configured() -> bool:
+    return bool(MP_ACCESS_TOKEN)
+
+
+def _parse_fee(raw) -> float:
+    try:
+        v = float(str(raw).replace(",", ".").strip())
+        return round(v, 2) if v > 0 else 150.0
+    except Exception:
+        return 150.0
+
+
+async def _mp_create_preference(payload: dict) -> dict:
+    def _do():
+        import requests as _req
+        return _req.post(
+            f"{MP_API}/checkout/preferences",
+            json=payload,
+            headers={"Authorization": f"Bearer {MP_ACCESS_TOKEN}", "Content-Type": "application/json"},
+            timeout=15,
+        )
+    loop = asyncio.get_event_loop()
+    resp = await loop.run_in_executor(None, _do)
+    if resp.status_code not in (200, 201):
+        logger.warning(f"[mp] create preference failed {resp.status_code}: {resp.text[:200]}")
+        raise HTTPException(status_code=502, detail="Falha ao iniciar pagamento no Mercado Pago")
+    return resp.json()
+
+
+async def _mp_get_payment(payment_id: str) -> dict:
+    def _do():
+        import requests as _req
+        return _req.get(
+            f"{MP_API}/v1/payments/{payment_id}",
+            headers={"Authorization": f"Bearer {MP_ACCESS_TOKEN}"},
+            timeout=15,
+        )
+    loop = asyncio.get_event_loop()
+    resp = await loop.run_in_executor(None, _do)
+    if resp.status_code != 200:
+        return {}
+    return resp.json()
+
+
+async def _assert_os_owner(os_number: str, user: dict) -> dict:
+    row = await sb_get_order(os_number)
+    if not row:
+        raise HTTPException(status_code=404, detail="Ordem de serviço não encontrada")
+    owner_email = (row.get("email") or "").strip().lower()
+    user_email = (user.get("email") or "").strip().lower()
+    if user.get("role") != "admin" and owner_email and owner_email != user_email:
+        raise HTTPException(status_code=403, detail="Acesso negado a esta OS")
+    return row
+
+
+@api_router.post("/service-orders/{os_number}/checkout")
+async def create_payment_checkout(os_number: str, request: Request):
+    """Create a Mercado Pago Checkout Pro preference for the OS visit fee.
+    Amount comes from the OS (Supabase) — never from the client."""
+    user = await get_current_user(request)
+    row = await _assert_os_owner(os_number, user)
+
+    existing = await db.payments.find_one({"os_number": os_number})
+    if existing and existing.get("status") == "approved":
+        raise HTTPException(status_code=409, detail="Taxa de visita já paga")
+
+    amount = _parse_fee(row.get("visit_fee"))
+    back = f"{PUBLIC_APP_URL}/pagamento?os={os_number}"
+
+    if not _mp_configured():
+        # MODO SIMULADO — chaves do Mercado Pago ainda não configuradas.
+        await db.payments.update_one(
+            {"os_number": os_number},
+            {"$set": {
+                "os_number": os_number, "amount": amount, "status": "pending",
+                "provider": "mock", "user_email": (user.get("email") or "").lower(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }, "$setOnInsert": {"created_at": datetime.now(timezone.utc).isoformat()}},
+            upsert=True,
+        )
+        return {
+            "mock": True,
+            "amount": amount,
+            "init_point": f"{back}&mock=1",
+            "preference_id": f"mock-{os_number}",
+        }
+
+    payload = {
+        "items": [{
+            "id": os_number, "title": f"Taxa de visita — OS {os_number}",
+            "quantity": 1, "currency_id": "BRL", "unit_price": amount,
+        }],
+        "external_reference": os_number,
+        "notification_url": f"{PUBLIC_APP_URL}/api/payments/webhook",
+        "back_urls": {"success": back, "pending": back, "failure": back},
+        "auto_return": "approved",
+        "statement_descriptor": "MASTERMAQ",
+        "payer": {"email": (user.get("email") or "")},
+    }
+    pref = await _mp_create_preference(payload)
+    await db.payments.update_one(
+        {"os_number": os_number},
+        {"$set": {
+            "os_number": os_number, "amount": amount, "status": "pending",
+            "provider": "mercadopago", "mp_preference_id": pref.get("id"),
+            "user_email": (user.get("email") or "").lower(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }, "$setOnInsert": {"created_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return {
+        "mock": False,
+        "amount": amount,
+        "preference_id": pref.get("id"),
+        "init_point": pref.get("init_point") or pref.get("sandbox_init_point"),
+    }
+
+
+@api_router.get("/service-orders/{os_number}/payment-status")
+async def get_payment_status(os_number: str, request: Request):
+    user = await get_current_user(request)
+    await _assert_os_owner(os_number, user)
+    pay = await db.payments.find_one({"os_number": os_number}, {"_id": 0})
+    if not pay:
+        return {"status": "unpaid", "amount": _parse_fee((await sb_get_order(os_number) or {}).get("visit_fee"))}
+    return {
+        "status": pay.get("status", "unpaid"),
+        "amount": pay.get("amount"),
+        "provider": pay.get("provider"),
+        "mp_payment_id": pay.get("mp_payment_id"),
+    }
+
+
+@api_router.post("/payments/mock/{os_number}")
+async def mock_confirm_payment(os_number: str, request: Request):
+    """DEV-ONLY: simulate a payment result while Mercado Pago keys are not set."""
+    if _mp_configured():
+        raise HTTPException(status_code=400, detail="Mercado Pago configurado — simulação desabilitada")
+    user = await get_current_user(request)
+    await _assert_os_owner(os_number, user)
+    body = await request.json()
+    status = body.get("status", "approved")
+    if status not in ("approved", "pending", "rejected"):
+        status = "approved"
+    await db.payments.update_one(
+        {"os_number": os_number},
+        {"$set": {"status": status, "provider": "mock", "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return {"status": status, "mock": True}
+
+
+@api_router.post("/payments/webhook")
+async def mp_webhook(request: Request):
+    """Mercado Pago payment notification. Verifies signature (when secret set),
+    fetches the real payment and updates the local payment record."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    payment_id = str((body.get("data") or {}).get("id") or request.query_params.get("data.id") or "")
+    if body.get("type") not in ("payment", None) or not payment_id:
+        return {"ok": True}
+
+    # Optional signature verification
+    if MP_WEBHOOK_SECRET:
+        try:
+            import hashlib as _hl, hmac as _hm, time as _t
+            sig = request.headers.get("x-signature", "")
+            req_id = request.headers.get("x-request-id", "")
+            parts = dict(x.split("=", 1) for x in sig.split(",") if "=" in x)
+            ts, received = parts.get("ts"), parts.get("v1")
+            if not ts or not received or abs(int(_t.time()) - int(ts)) > 300:
+                raise HTTPException(status_code=401, detail="assinatura inválida")
+            manifest = f"id:{payment_id};request-id:{req_id};ts:{ts};"
+            expected = _hm.new(MP_WEBHOOK_SECRET.encode(), manifest.encode(), _hl.sha256).hexdigest()
+            if not _hm.compare_digest(expected, received):
+                raise HTTPException(status_code=401, detail="assinatura inválida")
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=401, detail="assinatura inválida")
+
+    payment = await _mp_get_payment(payment_id)
+    os_number = payment.get("external_reference")
+    if not os_number:
+        return {"ok": True}
+    await db.payments.update_one(
+        {"os_number": os_number},
+        {"$set": {
+            "status": payment.get("status", "pending"),
+            "mp_payment_id": payment_id,
+            "status_detail": payment.get("status_detail"),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }},
+        upsert=True,
+    )
+    logger.info(f"[mp-webhook] OS={os_number} payment={payment_id} status={payment.get('status')}")
+    return {"ok": True}
+
+
+@api_router.get("/payments/public-key")
+async def mp_public_key():
+    return {"public_key": MP_PUBLIC_KEY, "configured": _mp_configured()}
+
 
 # ── Blog ─────────────────────────────────────────────────────────────
 @api_router.get("/blog")

@@ -20,7 +20,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [form, setForm] = useState({
     email: '', password: '', confirmPassword: '',
-    name: '', phone: '', cep: '', address: '', number: '', neighborhood: '', city: '', state: '',
+    name: '', phone: '', phone2: '', cep: '', address: '', number: '', neighborhood: '', city: '', state: '',
   });
   const { register, googleLogin } = useAuth();
   const navigate = useNavigate();
@@ -106,6 +106,7 @@ export default function RegisterPage() {
         password: form.password,
         name: form.name,
         phone: form.phone,
+        phone2: form.phone2,
         cep: form.cep,
         address: form.address,
         number: form.number,
@@ -201,9 +202,13 @@ export default function RegisterPage() {
                 <Input value={form.name} onChange={e => set('name', e.target.value)} className="mt-1 border-slate-300" placeholder="Seu nome completo" data-testid="register-name" />
               </div>
               <div>
-                <Label className="text-sm text-slate-700">Telefone *</Label>
+                <Label className="text-sm text-slate-700">Celular 1 *</Label>
                 <Input value={form.phone} onChange={e => set('phone', formatPhone(e.target.value))} className="mt-1 border-slate-300" placeholder="(31) 9 9999-9999" data-testid="register-phone" required />
                 <p className="text-[11px] text-slate-400 mt-1">Usamos para confirmar sua visita técnica.</p>
+              </div>
+              <div>
+                <Label className="text-sm text-slate-700">Celular 2 <span className="text-slate-400 font-normal">(opcional)</span></Label>
+                <Input value={form.phone2} onChange={e => set('phone2', formatPhone(e.target.value))} className="mt-1 border-slate-300" placeholder="(31) 9 8888-8888" data-testid="register-phone2" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

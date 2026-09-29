@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { ClipboardList, History, UserCog, Plus, Clock, CheckCircle2, Loader, AlertCircle, MessageCircle, Trash2, ArrowLeft } from 'lucide-react';
+import { ClipboardList, History, UserCog, Plus, Clock, CheckCircle2, Loader, AlertCircle, MessageCircle, Trash2, ArrowLeft, Eye, X, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import API from '@/lib/api';
 import SchedulingModal from '@/components/SchedulingModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -37,7 +38,7 @@ function StatusBadge({ status }) {
   );
 }
 
-function OrderCard({ order }) {
+function OrderCard({ order, onView }) {
   // Display the external system OS number (e.g. "27677") as soon as the
   // background sync persists it. Fall back to our internal OS-2026... while
   // the external push is still pending.
@@ -63,16 +64,157 @@ function OrderCard({ order }) {
         </div>
         <div>
           <span className="text-xs text-slate-400 uppercase tracking-wider">Data</span>
-          <p className="text-slate-700">{new Date(order.created_at).toLocaleDateString('pt-BR')}</p>
+          <p className="text-slate-700">{order.created_at ? new Date(order.created_at).toLocaleDateString('pt-BR') : '—'}</p>
         </div>
       </div>
       {order.defect_description && (
         <div className="mt-3 pt-3 border-t border-slate-100">
           <span className="text-xs text-slate-400 uppercase tracking-wider">Defeito</span>
-          <p className="text-sm text-slate-600 mt-0.5">{order.defect_description}</p>
+          <p className="text-sm text-slate-600 mt-0.5 line-clamp-2">{order.defect_description}</p>
         </div>
       )}
+      <div className="mt-4 pt-3 border-t border-slate-100 flex gap-2">
+        <Button
+          onClick={() => onView(order)}
+          variant="outline"
+          className="flex-1 text-sm border-slate-200 text-slate-700 hover:border-blue-600 hover:text-blue-600 hover:bg-blue-50"
+          data-testid={`view-details-${order.os_number}`}
+        >
+          <Eye className="w-4 h-4 mr-1.5" /> Ver Detalhes
+        </Button>
+        <a href={`/pagamento?os=${encodeURIComponent(order.os_number)}`} className="flex-1">
+          <Button className="w-full text-sm bg-blue-600 text-white hover:bg-blue-700" data-testid={`pay-fee-${order.os_number}`}>
+            <CheckCircle2 className="w-4 h-4 mr-1.5" /> Pagar taxa
+          </Button>
+        </a>
+      </div>
     </div>
+  );
+}
+
+// Campos exibidos no detalhe (rótulo + chave). Editáveis marcados com edit=true.
+const DETAIL_FIELDS = [
+  { key: 'customer_name', label: 'Nome Completo', edit: true },
+  { key: 'email', label: 'Email', edit: true },
+  { key: 'phone1', label: 'Celular 1', edit: true },
+  { key: 'phone2', label: 'Celular 2', edit: false },
+  { key: 'landline', label: 'Telefone Fixo', edit: false },
+  { key: 'cep', label: 'CEP', edit: true },
+  { key: 'address', label: 'Endereço', edit: true },
+  { key: 'number', label: 'Número', edit: true },
+  { key: 'complement', label: 'Complemento', edit: true },
+  { key: 'reference_point', label: 'Ponto de Referência', edit: true },
+  { key: 'neighborhood', label: 'Bairro', edit: true },
+  { key: 'city', label: 'Cidade', edit: true },
+  { key: 'state', label: 'UF', edit: true },
+  { key: 'product', label: 'Produto', edit: false },
+  { key: 'brand', label: 'Marca', edit: false },
+  { key: 'model', label: 'Modelo', edit: false },
+  { key: 'serial_number', label: 'Número de Série', edit: false },
+  { key: 'service_type', label: 'Tipo de Atendimento', edit: false },
+  { key: 'status', label: 'Status', edit: false },
+  { key: 'sub_status', label: 'Sub-status', edit: false },
+  { key: 'reported_defect', label: 'Defeito Relatado', edit: false },
+  { key: 'observations', label: 'Observações', edit: false },
+  { key: 'visit_fee', label: 'Taxa de Visita', edit: false },
+  { key: 'source', label: 'Origem', edit: false },
+  { key: 'registration_date', label: 'Data de Registro', edit: false },
+  { key: 'attendance_date', label: 'Data de Atendimento', edit: false },
+];
+
+const EDITABLE_KEYS = DETAIL_FIELDS.filter(f => f.edit).map(f => f.key);
+
+function OrderDetailsModal({ osNumber, open, onClose, onSaved }) {
+  const [detail, setDetail] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [edit, setEdit] = useState({});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open || !osNumber) return;
+    let cancelled = false;
+    setLoading(true);
+    setDetail(null);
+    API.get(`/service-orders/${osNumber}`)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setDetail(data);
+        const e = {};
+        EDITABLE_KEYS.forEach(k => { e[k] = data[k] || ''; });
+        setEdit(e);
+      })
+      .catch(() => { if (!cancelled) toast.error('Erro ao carregar a OS'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [open, osNumber]);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const { data } = await API.put(`/service-orders/${osNumber}`, edit);
+      setDetail(data);
+      toast.success('Dados atualizados no sistema!');
+      onSaved && onSaved();
+    } catch (err) {
+      const msg = err?.response?.data?.detail;
+      toast.error(typeof msg === 'string' ? msg : 'Erro ao atualizar');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="order-details-modal">
+        <DialogHeader>
+          <DialogTitle className="font-heading text-xl text-slate-900">
+            Ordem de Serviço {detail?.os_number ? `#${detail.os_number}` : ''}
+          </DialogTitle>
+          <DialogDescription className="text-slate-500 text-sm">
+            Você pode editar seus dados de contato e endereço. As alterações são gravadas diretamente no sistema.
+          </DialogDescription>
+        </DialogHeader>
+
+        {loading ? (
+          <div className="flex justify-center py-16"><div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>
+        ) : !detail ? (
+          <p className="text-center text-slate-500 py-10 text-sm">Não foi possível carregar a OS.</p>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {DETAIL_FIELDS.map(f => {
+                const val = f.edit ? (edit[f.key] ?? '') : (detail[f.key] ?? '');
+                if (!f.edit && (val === '' || val === null)) return null;
+                return (
+                  <div key={f.key} className={f.key === 'address' || f.key === 'reported_defect' || f.key === 'observations' ? 'sm:col-span-2' : ''}>
+                    <Label className="text-[11px] uppercase tracking-wider text-slate-400">{f.label}</Label>
+                    {f.edit ? (
+                      <Input
+                        value={val}
+                        onChange={e => setEdit(p => ({ ...p, [f.key]: e.target.value }))}
+                        className="mt-1 border-slate-300 text-sm"
+                        data-testid={`detail-edit-${f.key}`}
+                      />
+                    ) : (
+                      <p className="mt-1 text-sm text-slate-700 break-words">{String(val)}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-slate-100">
+              <Button variant="outline" onClick={onClose} className="text-sm border-slate-200" data-testid="detail-close">
+                <X className="w-4 h-4 mr-1.5" /> Fechar
+              </Button>
+              <Button onClick={save} disabled={saving} className="flex-1 bg-blue-600 text-white hover:bg-blue-700 text-sm" data-testid="detail-save">
+                <Save className="w-4 h-4 mr-1.5" /> {saving ? 'Salvando...' : 'Salvar Alterações'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -85,10 +227,15 @@ export default function PortalPage() {
   const [saving, setSaving] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [detailOs, setDetailOs] = useState(null);
+
+  const refreshOrdersOnce = () => {
+    API.get('/service-orders').then(({ data }) => setOrders(data)).catch(() => {});
+  };
 
   useEffect(() => {
     if (!user) return;
-    setProfile({ name: user.name || '', phone: user.phone || '', cep: user.cep || '', address: user.address || '', number: user.number || '', neighborhood: user.neighborhood || '', city: user.city || '', state: user.state || '' });
+    setProfile({ name: user.name || '', phone: user.phone || '', phone2: user.phone2 || '', cep: user.cep || '', address: user.address || '', number: user.number || '', complement: user.complement || '', reference_point: user.reference_point || '', neighborhood: user.neighborhood || '', city: user.city || '', state: user.state || '' });
     let cancelled = false;
     const refreshOrders = () => {
       API.get('/service-orders')
@@ -163,8 +310,14 @@ export default function PortalPage() {
     if (clean.length === 8) lookupCep(formatted);
   };
 
-  const activeOrders = orders.filter(o => o.status !== 'concluido' && o.status !== 'cancelado');
-  const historyOrders = orders.filter(o => o.status === 'concluido' || o.status === 'cancelado');
+  const activeOrders = orders.filter(o => {
+    const s = (o.status || '').toLowerCase();
+    return !s.includes('conclu') && !s.includes('cancel') && !s.includes('finaliz');
+  });
+  const historyOrders = orders.filter(o => {
+    const s = (o.status || '').toLowerCase();
+    return s.includes('conclu') || s.includes('cancel') || s.includes('finaliz');
+  });
 
   return (
     <div className="py-16 sm:py-24" data-testid="portal-page">
@@ -225,7 +378,7 @@ export default function PortalPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-testid="active-orders">
-                  {activeOrders.map(o => <OrderCard key={o.os_number} order={o} />)}
+                  {activeOrders.map(o => <OrderCard key={o.os_number} order={o} onView={(ord) => setDetailOs(ord.os_number)} />)}
                 </div>
               )}
             </TabsContent>
@@ -238,7 +391,7 @@ export default function PortalPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-testid="history-orders">
-                  {historyOrders.map(o => <OrderCard key={o.os_number} order={o} />)}
+                  {historyOrders.map(o => <OrderCard key={o.os_number} order={o} onView={(ord) => setDetailOs(ord.os_number)} />)}
                 </div>
               )}
             </TabsContent>
@@ -255,8 +408,19 @@ export default function PortalPage() {
                   <Input value={profile.name} onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} className="mt-1 border-slate-300" data-testid="profile-name" />
                 </div>
                 <div>
-                  <Label className="text-sm text-slate-700">Telefone</Label>
-                  <Input value={profile.phone} onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} className="mt-1 border-slate-300" data-testid="profile-phone" />
+                  <Label className="text-sm text-slate-700">Email</Label>
+                  <Input value={user?.email || ''} disabled readOnly className="mt-1 border-slate-200 bg-slate-50 text-slate-500" data-testid="profile-email" />
+                  <p className="text-[11px] text-slate-400 mt-1">O email é usado para acessar sua conta e não pode ser alterado aqui.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-sm text-slate-700">Celular 1</Label>
+                    <Input value={profile.phone} onChange={e => setProfile(p => ({ ...p, phone: e.target.value }))} className="mt-1 border-slate-300" placeholder="(31) 99999-9999" data-testid="profile-phone" />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-slate-700">Celular 2</Label>
+                    <Input value={profile.phone2} onChange={e => setProfile(p => ({ ...p, phone2: e.target.value }))} className="mt-1 border-slate-300" placeholder="(31) 98888-8888" data-testid="profile-phone2" />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -281,6 +445,16 @@ export default function PortalPage() {
                   <Label className="text-sm text-slate-700">Endereço</Label>
                   <Input value={profile.address} onChange={e => setProfile(p => ({ ...p, address: e.target.value }))} className="mt-1 border-slate-300" data-testid="profile-address" />
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-sm text-slate-700">Complemento</Label>
+                    <Input value={profile.complement} onChange={e => setProfile(p => ({ ...p, complement: e.target.value }))} className="mt-1 border-slate-300" data-testid="profile-complement" />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-slate-700">Ponto de Referência</Label>
+                    <Input value={profile.reference_point} onChange={e => setProfile(p => ({ ...p, reference_point: e.target.value }))} className="mt-1 border-slate-300" data-testid="profile-reference" />
+                  </div>
+                </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <Label className="text-sm text-slate-700">Bairro</Label>
@@ -304,7 +478,13 @@ export default function PortalPage() {
         </motion.div>
       </div>
 
-      <SchedulingModal open={modalOpen} onClose={() => { setModalOpen(false); API.get('/service-orders').then(({ data }) => setOrders(data)).catch(() => {}); }} equipment={modalOpen ? { id: 'geladeiras', name: 'Geladeiras', icon: 'Snowflake' } : null} />
+      <SchedulingModal open={modalOpen} onClose={() => { setModalOpen(false); refreshOrdersOnce(); }} equipment={null} />
+      <OrderDetailsModal
+        osNumber={detailOs}
+        open={!!detailOs}
+        onClose={() => setDetailOs(null)}
+        onSaved={refreshOrdersOnce}
+      />
     </div>
   );
 }

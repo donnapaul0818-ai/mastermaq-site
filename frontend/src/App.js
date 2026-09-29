@@ -17,6 +17,7 @@ import BlogArticlePage from "@/pages/BlogArticlePage";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import PortalPage from "@/pages/PortalPage";
+import PaymentPage from "@/pages/PaymentPage";
 import VRFHisensePage from "@/pages/VRFHisensePage";
 
 function ScrollToTop() {
@@ -46,6 +47,7 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/cadastro" element={<RegisterPage />} />
       <Route path="/minha-conta" element={<ProtectedRoute><PortalPage /></ProtectedRoute>} />
+      <Route path="/pagamento" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
     </Routes>
   );
 }

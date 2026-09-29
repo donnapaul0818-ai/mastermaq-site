@@ -12,7 +12,7 @@ import {
   Shield, Award, Clock, Home, ArrowRight, Star, ChevronRight, ChevronLeft, Wrench,
   Snowflake, Cog, Shirt, Droplets, Wind, AirVent, Server, Thermometer, Fan,
   Phone, CheckCircle2, Quote, Flame,
-  Utensils, ChefHat, Microwave, Refrigerator, IceCream, Beer
+  Utensils, ChefHat, Microwave, Refrigerator, IceCream, Beer, PackagePlus
 } from 'lucide-react';
 
 const ICON_MAP = {
@@ -742,6 +742,20 @@ export default function HomePage() {
                     </motion.button>
                   );
                 })}
+                {/* Outros produtos — abre o modal no seletor de produto (com opção de digitar) */}
+                <motion.button variants={fadeUp}
+                  onClick={() => openModal(null)}
+                  className="group relative bg-white border border-dashed border-slate-300 p-5 sm:p-6 flex flex-col items-center justify-center gap-4 hover:-translate-y-2 hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.12)] hover:border-blue-500/60 transition-all duration-400 cursor-pointer overflow-hidden"
+                  data-testid="equipment-outros">
+                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-600 scale-x-0 group-hover:scale-x-100 transition-transform duration-400 origin-left" />
+                  <div className="w-16 h-16 bg-slate-50 flex items-center justify-center group-hover:bg-blue-600 transition-colors duration-300">
+                    <PackagePlus className="w-7 h-7 text-blue-600 group-hover:text-white transition-colors duration-300" />
+                  </div>
+                  <span className="font-heading font-medium text-sm text-slate-800 text-center">Outros produtos</span>
+                  <span className="text-xs text-blue-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium">
+                    Digitar produto <ArrowRight className="w-3 h-3" />
+                  </span>
+                </motion.button>
               </div>
             </motion.div>
           </div>
