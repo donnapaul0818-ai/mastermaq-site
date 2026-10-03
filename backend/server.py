@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from typing import Optional
 import random
 import string
+from html import escape
 
 # MongoDB
 mongo_url = os.environ['MONGO_URL']
@@ -185,6 +186,12 @@ async def register(data: RegisterRequest, response: Response):
     response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True, samesite="none", max_age=3600, path="/")
     response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=True, samesite="none", max_age=2592000, path="/")
     full = await db.users.find_one({"_id": ObjectId(user_id)}, {"password_hash": 0})
+    full["_id"] = str(full["_id"])
+    try:
+        asyncio.create_task(email_welcome(email, data.name))
+    except Exception:
+        pass
+    return full
     full["_id"] = str(full["_id"])
     return full
 
@@ -684,6 +691,15 @@ async def create_service_order(data: ServiceOrderCreate, request: Request):
     ext_data = ext.get("data") if isinstance(ext.get("data"), dict) else {}
     external_os = str(ext_data.get("os_number") or ext_data.get("id") or "")
 
+    # Fire-and-forget confirmation email (best-effort).
+    try:
+        asyncio.create_task(email_order_confirmation(
+            user_doc.get("email"), user_doc.get("name"), external_os,
+            _equipment_name(data.equipment_type), data.brand,
+        ))
+    except Exception:
+        pass
+
     return {
         "os_number": external_os,
         "external_os_number": external_os,
@@ -951,6 +967,12 @@ async def mock_confirm_payment(os_number: str, request: Request):
         {"$set": {"status": status, "provider": "mock", "updated_at": datetime.now(timezone.utc).isoformat()}},
         upsert=True,
     )
+    if status == "approved":
+        pay = await db.payments.find_one({"os_number": os_number})
+        try:
+            asyncio.create_task(email_payment_approved(user.get("email"), os_number, (pay or {}).get("amount")))
+        except Exception:
+            pass
     return {"status": status, "mock": True}
 
 
@@ -999,6 +1021,14 @@ async def mp_webhook(request: Request):
         }},
         upsert=True,
     )
+    if payment.get("status") == "approved":
+        pay = await db.payments.find_one({"os_number": os_number})
+        to = (pay or {}).get("user_email")
+        if to:
+            try:
+                asyncio.create_task(email_payment_approved(to, os_number, (pay or {}).get("amount")))
+            except Exception:
+                pass
     logger.info(f"[mp-webhook] OS={os_number} payment={payment_id} status={payment.get('status')}")
     return {"ok": True}
 
@@ -1006,6 +1036,117 @@ async def mp_webhook(request: Request):
 @api_router.get("/payments/public-key")
 async def mp_public_key():
     return {"public_key": MP_PUBLIC_KEY, "configured": _mp_configured()}
+
+
+# ── Email (Resend) ───────────────────────────────────────────────────
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
+EMAIL_FROM = os.environ.get("EMAIL_FROM", "Mastermaq Assistência Técnica <nao-responda@mastermaqassistencia.com.br>")
+COMPANY_EMAIL = os.environ.get("COMPANY_EMAIL", "mastermaqassistencia@gmail.com")
+_SITE = "https://mastermaqassistencia.com.br"
+
+
+def _email_shell(title: str, body_html: str) -> str:
+    return (
+        '<table role="presentation" width="100%" style="background:#f1f5f9;padding:24px 0">'
+        '<tr><td align="center">'
+        '<table role="presentation" width="600" style="background:#ffffff;border:1px solid #e2e8f0;font-family:Arial,Helvetica,sans-serif">'
+        '<tr><td style="background:#0f172a;padding:20px 28px">'
+        '<span style="color:#fff;font-size:18px;font-weight:bold">Mastermaq Assistência Técnica</span></td></tr>'
+        f'<tr><td style="padding:28px">'
+        f'<h1 style="color:#0f172a;font-size:20px;margin:0 0 16px">{escape(title)}</h1>'
+        f'{body_html}</td></tr>'
+        '<tr><td style="padding:18px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;color:#64748b;font-size:12px">'
+        'Mastermaq Assistência Técnica · R. Descalvado, 636A - Renascença, BH/MG · (31) 3422-5293<br>'
+        'Nunca pedimos senha ou dados de cartão por e-mail.</td></tr>'
+        '</table></td></tr></table>'
+    )
+
+
+async def send_email(to: str, subject: str, html: str) -> bool:
+    """Best-effort transactional email via Resend. Never raises to the caller."""
+    if not RESEND_API_KEY or not to:
+        return False
+    payload = {"from": EMAIL_FROM, "to": [to], "subject": subject, "html": html,
+               "reply_to": COMPANY_EMAIL}
+
+    def _do():
+        import requests as _req
+        return _req.post(
+            "https://api.resend.com/emails",
+            json=payload,
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+            timeout=15,
+        )
+    try:
+        loop = asyncio.get_event_loop()
+        resp = await loop.run_in_executor(None, _do)
+        ok = resp.status_code in (200, 201)
+        if not ok:
+            logger.warning(f"[email] send failed {resp.status_code}: {resp.text[:200]}")
+        return ok
+    except Exception as e:
+        logger.warning(f"[email] error: {e}")
+        return False
+
+
+async def email_order_confirmation(to: str, name: str, os_number: str, product: str, brand: str):
+    body = (
+        f'<p style="color:#334155;font-size:14px;line-height:1.6">Olá {escape(name or "cliente")}, '
+        f'recebemos sua solicitação de atendimento.</p>'
+        f'<table role="presentation" width="100%" style="margin:16px 0;border:1px solid #e2e8f0">'
+        f'<tr><td style="padding:10px 14px;color:#64748b;font-size:12px">Nº da OS</td>'
+        f'<td style="padding:10px 14px;color:#0f172a;font-weight:bold;text-align:right">{escape(str(os_number))}</td></tr>'
+        f'<tr><td style="padding:10px 14px;color:#64748b;font-size:12px">Produto</td>'
+        f'<td style="padding:10px 14px;color:#0f172a;text-align:right">{escape(product or "-")}</td></tr>'
+        f'<tr><td style="padding:10px 14px;color:#64748b;font-size:12px">Marca</td>'
+        f'<td style="padding:10px 14px;color:#0f172a;text-align:right">{escape(brand or "-")}</td></tr>'
+        f'<tr><td style="padding:10px 14px;color:#64748b;font-size:12px">Status</td>'
+        f'<td style="padding:10px 14px;color:#b45309;text-align:right">Aguardando Análise A.T</td></tr></table>'
+        f'<p style="color:#334155;font-size:14px;line-height:1.6">Nossa Central vai analisar e entrar em contato. '
+        f'Acompanhe pelo <a href="{_SITE}/minha-conta" style="color:#2563eb">seu portal</a>.</p>'
+    )
+    await send_email(to, f"OS {os_number} recebida — Mastermaq", _email_shell("Solicitação recebida", body))
+
+
+async def email_payment_approved(to: str, os_number: str, amount):
+    try:
+        amt = f"R$ {float(amount):.2f}".replace(".", ",")
+    except Exception:
+        amt = "a taxa de visita"
+    body = (
+        f'<p style="color:#334155;font-size:14px;line-height:1.6">Confirmamos o pagamento de <strong>{escape(amt)}</strong> '
+        f'referente à taxa de visita da OS <strong>{escape(str(os_number))}</strong>.</p>'
+        f'<p style="color:#334155;font-size:14px;line-height:1.6">Sua visita técnica será agendada pela nossa equipe. '
+        f'Acompanhe pelo <a href="{_SITE}/minha-conta" style="color:#2563eb">seu portal</a>.</p>'
+    )
+    await send_email(to, f"Pagamento aprovado — OS {os_number}", _email_shell("Pagamento aprovado", body))
+
+
+async def email_welcome(to: str, name: str):
+    body = (
+        f'<p style="color:#334155;font-size:14px;line-height:1.6">Olá {escape(name or "cliente")}, '
+        f'sua conta na Mastermaq foi criada com sucesso!</p>'
+        f'<p style="color:#334155;font-size:14px;line-height:1.6">Pelo portal você pode solicitar atendimento, '
+        f'acompanhar suas ordens de serviço e falar com a nossa assistente virtual.</p>'
+        f'<p style="margin:18px 0"><a href="{_SITE}/minha-conta" '
+        f'style="background:#2563eb;color:#fff;padding:12px 20px;text-decoration:none;font-size:14px">Acessar meu portal</a></p>'
+    )
+    await send_email(to, "Bem-vindo à Mastermaq Assistência Técnica", _email_shell("Conta criada", body))
+
+
+async def email_contact_to_company(name: str, email: str, phone: str, message: str):
+    body = (
+        f'<p style="color:#334155;font-size:14px;line-height:1.6">Nova mensagem pelo formulário de contato:</p>'
+        f'<table role="presentation" width="100%" style="margin:12px 0;border:1px solid #e2e8f0">'
+        f'<tr><td style="padding:10px 14px;color:#64748b;font-size:12px">Nome</td>'
+        f'<td style="padding:10px 14px;color:#0f172a;text-align:right">{escape(name or "-")}</td></tr>'
+        f'<tr><td style="padding:10px 14px;color:#64748b;font-size:12px">Email</td>'
+        f'<td style="padding:10px 14px;color:#0f172a;text-align:right">{escape(email or "-")}</td></tr>'
+        f'<tr><td style="padding:10px 14px;color:#64748b;font-size:12px">Telefone</td>'
+        f'<td style="padding:10px 14px;color:#0f172a;text-align:right">{escape(phone or "-")}</td></tr></table>'
+        f'<p style="color:#334155;font-size:14px;line-height:1.6"><strong>Mensagem:</strong><br>{escape(message or "")}</p>'
+    )
+    await send_email(COMPANY_EMAIL, f"Contato pelo site — {name or email}", _email_shell("Nova mensagem de contato", body))
 
 
 # ── Blog ─────────────────────────────────────────────────────────────
@@ -1053,6 +1194,10 @@ async def submit_contact(data: ContactCreate):
     }
     await db.contact_messages.insert_one(doc)
     doc.pop("_id", None)
+    try:
+        asyncio.create_task(email_contact_to_company(data.name, data.email, data.phone, data.message))
+    except Exception:
+        pass
     return {"message": "Mensagem enviada com sucesso!", "data": doc}
 
 # ── CEP Proxy ────────────────────────────────────────────────────────

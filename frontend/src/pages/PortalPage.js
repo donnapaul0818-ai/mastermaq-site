@@ -84,7 +84,7 @@ function OrderCard({ order, onView }) {
         </Button>
         <a href={`/pagamento?os=${encodeURIComponent(order.os_number)}`} className="flex-1">
           <Button className="w-full text-sm bg-blue-600 text-white hover:bg-blue-700" data-testid={`pay-fee-${order.os_number}`}>
-            <CheckCircle2 className="w-4 h-4 mr-1.5" /> Pagar taxa
+            <CheckCircle2 className="w-4 h-4 mr-1.5" /> Taxa de visita
           </Button>
         </a>
       </div>

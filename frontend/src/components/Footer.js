@@ -5,12 +5,15 @@ const FOOTER_LINKS = [
   { title: 'Serviços', links: [
     { to: '/servicos', label: 'Todos os Serviços' },
     { to: '/servicos/geladeiras', label: 'Geladeiras' },
-    { to: '/servicos/ar-condicionado-split', label: 'Ar Condicionado' },
+    { to: '/servicos/ar-condicionado-split', label: 'Ar Condicionado Split' },
     { to: '/servicos/lava-e-seca', label: 'Lava e Seca' },
+    { to: '/servicos/lavadoras', label: 'Lavadoras' },
     { to: '/servicos/freezers', label: 'Freezers' },
+    { to: '/servicos/coifas', label: 'Coifas' },
+    { to: '/vrf-hisense', label: 'VRF Hisense' },
   ]},
   { title: 'Empresa', links: [
-    { to: '/sobre', label: 'Sobre Nos' },
+    { to: '/sobre', label: 'Sobre Nós' },
     { to: '/blog', label: 'Blog' },
     { to: '/contato', label: 'Contato' },
   ]},

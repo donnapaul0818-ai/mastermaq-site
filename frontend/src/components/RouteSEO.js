@@ -12,9 +12,9 @@ const BASE_KEYWORDS =
 const SEO_MAP = [
   {
     match: (p) => p === "/",
-    title: "Mastermaq Assistência Técnica | Autorizada em BH",
+    title: "Mastermaq — Assistência Técnica Autorizada em BH/MG",
     description:
-      "Assistência técnica autorizada em Belo Horizonte/MG. Conserto de geladeiras, lava e seca, lavadoras, ar condicionado, freezers e coifas com peças originais e técnicos homologados.",
+      "Assistência técnica autorizada em BH/MG: conserto de geladeiras, lavadoras, ar-condicionado, freezers, coifas e VRF Hisense com peças originais.",
     keywords: BASE_KEYWORDS,
   },
   {
@@ -78,9 +78,9 @@ const SEO_MAP = [
 ];
 
 const DEFAULT_SEO = {
-  title: "Mastermaq Assistência Técnica | Autorizada em BH",
+  title: "Mastermaq — Assistência Técnica Autorizada em BH/MG",
   description:
-    "Assistência técnica autorizada em Belo Horizonte/MG. Conserto de eletrodomésticos com peças originais e técnicos homologados.",
+    "Assistência técnica autorizada em BH/MG. Conserto de eletrodomésticos com peças originais e técnicos homologados.",
   keywords: BASE_KEYWORDS,
 };
 

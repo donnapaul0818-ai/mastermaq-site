@@ -11,11 +11,11 @@ const money = (v) => {
 };
 
 const STATUS_UI = {
-  approved: { icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-100', title: 'Pagamento aprovado!', desc: 'Sua taxa de visita foi paga. A visita técnica será agendada pela nossa equipe.' },
+  approved: { icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-100', title: 'Pagamento aprovado!', desc: 'Sua taxa de visita foi paga. A visita técnica será agendada pela nossa equipe e você receberá uma mensagem de confirmação no seu Whatsapp.' },
   pending: { icon: Clock, color: 'text-amber-600', bg: 'bg-amber-100', title: 'Pagamento pendente', desc: 'Estamos aguardando a confirmação do pagamento (Pix/boleto). Esta página atualiza automaticamente.' },
   in_process: { icon: Clock, color: 'text-amber-600', bg: 'bg-amber-100', title: 'Pagamento em análise', desc: 'Seu pagamento está sendo processado. Aguarde a confirmação.' },
   rejected: { icon: XCircle, color: 'text-red-600', bg: 'bg-red-100', title: 'Pagamento recusado', desc: 'O pagamento não foi aprovado. Tente novamente com outro método.' },
-  unpaid: { icon: ShieldCheck, color: 'text-blue-600', bg: 'bg-blue-100', title: 'Taxa de visita', desc: 'Para agendar a visita técnica, é necessário pagar a taxa de visita.' },
+  unpaid: { icon: ShieldCheck, color: 'text-blue-600', bg: 'bg-blue-100', title: 'Taxa de visita', desc: 'Para agendar a visita técnica, é necessário pagar a taxa de visita. Essa taxa é referente ao deslocamente e diagnóstico técnico e volta como desconto no valor total do orçamento.' },
 };
 
 export default function PaymentPage() {
