@@ -1,5 +1,12 @@
 import { Link } from 'react-router-dom';
-import { Phone, Mail, MapPin, Clock } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock, Facebook, Instagram, Linkedin, Youtube } from 'lucide-react';
+
+const SOCIALS = [
+  { label: 'Facebook', href: 'https://www.facebook.com/consertodegeladeirabhte/?locale=pt_BR', Icon: Facebook },
+  { label: 'Instagram', href: 'https://www.instagram.com/consertodegeladeirabh', Icon: Instagram },
+  { label: 'LinkedIn', href: 'https://br.linkedin.com/in/mastermaq-assist%C3%AAncia-t%C3%A9cnica-ltda-6423261b9', Icon: Linkedin },
+  { label: 'YouTube', href: 'https://www.youtube.com/@mastermaq', Icon: Youtube },
+];
 
 const FOOTER_LINKS = [
   { title: 'Serviços', links: [
