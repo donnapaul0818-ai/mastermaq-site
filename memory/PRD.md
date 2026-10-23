@@ -19,7 +19,8 @@ blog, landing VRF Hisense, IA "Mi", pagamento da taxa de visita.
 - `PUT /api/service-orders/{os}` — cliente edita: customer_name, email, cep,
   address, number, neighborhood, city, state, complement, reference_point, phone1
 - `POST /api/service-orders` — cria OS (push externo síncrono, retorna número)
-- `POST /api/service-orders/{os}/checkout` — Mercado Pago Checkout Pro (valor = visit_fee)
+- `POST /api/service-orders/{os}/pay` — Mercado Pago Payment Brick (transparente, /v1/payments; valor = visit_fee do Supabase, padrão R$150)
+- (legado) `POST /api/service-orders/{os}/checkout` — Checkout Pro, não usado pelo front
 - `GET /api/service-orders/{os}/payment-status` — status do pagamento (Mongo)
 - `POST /api/payments/webhook` — notificação MP (assinatura HMAC quando secret setado)
 - `POST /api/payments/mock/{os}` — DEV: simula pagamento (só sem access token)
@@ -34,8 +35,9 @@ blog, landing VRF Hisense, IA "Mi", pagamento da taxa de visita.
 - Rate limit por IP (auth/chat/write/default).
 
 ## Pendências / Gotchas
-- **Mercado Pago em MODO SIMULADO** até `MERCADOPAGO_ACCESS_TOKEN`/`PUBLIC_KEY`/
-  `WEBHOOK_SECRET` serem preenchidos no backend/.env. Valor da taxa a definir.
+- **Mercado Pago REAL (2026-06)**: Payment Brick embutido em /pagamento (PaymentBrickBox.js).
+  Aprovado => Mongo `payments` + anota linha em `observations` daquela OS no Supabase (uma vez) + email.
+  Webhook `/api/payments/webhook` com HMAC. Configurar URL no painel MP para produção.
 - Atlas `eletro-master` inacessível (IP Access List) → usando Mongo local.
 - Google OAuth: adicionar origem `https://mastermaqassistencia.com.br` no Console.
 - ENV externas em backend/.env: SUPABASE_*, EXTERNAL_OS_*, PUBLIC_APP_URL, MERCADOPAGO_*.

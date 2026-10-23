@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Clock, XCircle, Loader, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, Clock, XCircle, Loader, ShieldCheck, ArrowLeft, Copy, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import API from '@/lib/api';
+import { PaymentBrickBox } from '@/components/PaymentBrickBox';
 
 const money = (v) => {
   if (v == null) return '—';
@@ -18,13 +19,35 @@ const STATUS_UI = {
   unpaid: { icon: ShieldCheck, color: 'text-blue-600', bg: 'bg-blue-100', title: 'Taxa de visita', desc: 'Para agendar a visita técnica, é necessário pagar a taxa de visita. Essa taxa é referente ao deslocamente e diagnóstico técnico e volta como desconto no valor total do orçamento.' },
 };
 
+const Instructions = ({ info }) => {
+  if (!info) return null;
+  const copy = () => { navigator.clipboard.writeText(info.qr_code); toast.success('Código Pix copiado'); };
+  return (
+    <div className="mb-5 border border-slate-200 p-4" data-testid="payment-instructions">
+      {info.qr_code_base64 && (
+        <img src={`data:image/png;base64,${info.qr_code_base64}`} alt="QR Code Pix" className="w-48 h-48 mx-auto" data-testid="pix-qr-image" />
+      )}
+      {info.qr_code && (
+        <Button onClick={copy} variant="outline" className="w-full mt-3" data-testid="pix-copy-btn">
+          <Copy className="w-4 h-4 mr-2" /> Copiar código Pix
+        </Button>
+      )}
+      {info.ticket_url && !info.qr_code && (
+        <a href={info.ticket_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-blue-600 text-sm font-medium" data-testid="boleto-link">
+          <ExternalLink className="w-4 h-4" /> Abrir boleto
+        </a>
+      )}
+    </div>
+  );
+};
+
 export default function PaymentPage() {
   const [params] = useSearchParams();
   const osNumber = params.get('os');
-  const isMock = params.get('mock') === '1';
   const [status, setStatus] = useState('loading');
   const [amount, setAmount] = useState(null);
-  const [busy, setBusy] = useState(false);
+  const [info, setInfo] = useState(null);
+  const [retry, setRetry] = useState(false);
 
   const fetchStatus = useCallback(async () => {
     if (!osNumber) return;
@@ -32,6 +55,7 @@ export default function PaymentPage() {
       const { data } = await API.get(`/service-orders/${osNumber}/payment-status`);
       setStatus(data.status || 'unpaid');
       if (data.amount != null) setAmount(data.amount);
+      if (data.instructions) setInfo(data.instructions);
     } catch {
       setStatus('unpaid');
     }
@@ -39,38 +63,16 @@ export default function PaymentPage() {
 
   useEffect(() => { fetchStatus(); }, [fetchStatus]);
 
-  // Poll while not in a terminal state.
   useEffect(() => {
-    if (['approved', 'rejected'].includes(status)) return;
-    const id = setInterval(fetchStatus, 4000);
+    if (!['pending', 'in_process'].includes(status)) return;
+    const id = setInterval(fetchStatus, 5000);
     return () => clearInterval(id);
   }, [status, fetchStatus]);
 
-  const startCheckout = async () => {
-    setBusy(true);
-    try {
-      const { data } = await API.post(`/service-orders/${osNumber}/checkout`);
-      if (data.init_point) { window.location.assign(data.init_point); return; }
-      await fetchStatus();
-    } catch (err) {
-      const msg = err?.response?.data?.detail;
-      toast.error(typeof msg === 'string' ? msg : 'Erro ao iniciar pagamento');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const simulate = async (s) => {
-    setBusy(true);
-    try {
-      await API.post(`/payments/mock/${osNumber}`, { status: s });
-      await fetchStatus();
-      toast.success(`Pagamento simulado: ${s}`);
-    } catch {
-      toast.error('Erro na simulação');
-    } finally {
-      setBusy(false);
-    }
+  const onResult = (res) => {
+    setRetry(false);
+    setStatus(res.status || 'pending');
+    if (res.qr_code || res.ticket_url) setInfo(res);
   };
 
   if (!osNumber) {
@@ -84,10 +86,11 @@ export default function PaymentPage() {
 
   const ui = STATUS_UI[status] || STATUS_UI.unpaid;
   const Icon = status === 'loading' ? Loader : ui.icon;
+  const showBrick = amount != null && (status === 'unpaid' || retry);
 
   return (
     <div className="py-16 sm:py-24 px-4" data-testid="payment-page">
-      <div className="max-w-md mx-auto bg-white border border-slate-200 p-8 text-center">
+      <div className="max-w-lg mx-auto bg-white border border-slate-200 p-6 sm:p-8 text-center">
         <div className={`w-16 h-16 ${status === 'loading' ? 'bg-slate-100' : ui.bg} rounded-full flex items-center justify-center mx-auto mb-4`}>
           <Icon className={`w-8 h-8 ${status === 'loading' ? 'text-slate-400 animate-spin' : ui.color}`} />
         </div>
@@ -102,26 +105,17 @@ export default function PaymentPage() {
           <span className="font-heading text-lg font-semibold text-slate-900" data-testid="payment-amount">{money(amount)}</span>
         </div>
 
-        {isMock && status !== 'approved' && (
-          <div className="mb-5 border border-dashed border-amber-300 bg-amber-50 p-3 text-left" data-testid="payment-mock-panel">
-            <p className="text-[12px] text-amber-800 font-medium mb-2">
-              Modo simulação (chaves do Mercado Pago ainda não configuradas)
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" disabled={busy} onClick={() => simulate('approved')} className="bg-green-600 hover:bg-green-700 text-white text-xs" data-testid="mock-approve">Simular aprovado</Button>
-              <Button size="sm" disabled={busy} onClick={() => simulate('pending')} variant="outline" className="text-xs" data-testid="mock-pending">Simular Pix pendente</Button>
-              <Button size="sm" disabled={busy} onClick={() => simulate('rejected')} variant="outline" className="text-xs text-red-600 border-red-200" data-testid="mock-reject">Simular recusado</Button>
-            </div>
-          </div>
-        )}
+        {['pending', 'in_process'].includes(status) && !retry && <Instructions info={info} />}
 
-        {(status === 'unpaid' || status === 'rejected') && !isMock && (
-          <Button onClick={startCheckout} disabled={busy} className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11" data-testid="pay-now-btn">
-            {busy ? 'Redirecionando...' : 'Pagar taxa de visita'}
+        {showBrick && <PaymentBrickBox osNumber={osNumber} amount={amount} onResult={onResult} />}
+
+        {['rejected', 'pending'].includes(status) && !retry && (
+          <Button onClick={() => setRetry(true)} variant="outline" className="w-full h-11" data-testid="pay-retry-btn">
+            {status === 'rejected' ? 'Tentar novamente' : 'Pagar com outro método'}
           </Button>
         )}
 
-        <Link to="/minha-conta" className="mt-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-blue-600">
+        <Link to="/minha-conta" className="mt-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-blue-600" data-testid="payment-back-link">
           <ArrowLeft className="w-4 h-4" /> Voltar ao portal
         </Link>
       </div>

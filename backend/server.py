@@ -16,7 +16,8 @@ import jwt
 import requests
 from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Any
+import uuid
 import random
 import string
 from html import escape
@@ -936,6 +937,119 @@ async def create_payment_checkout(os_number: str, request: Request):
     }
 
 
+class BrickPaymentIn(BaseModel):
+    payment_method_id: str
+    token: Optional[str] = None
+    installments: Optional[int] = None
+    issuer_id: Optional[Any] = None
+    payer: dict = {}
+    transaction_details: Optional[dict] = None
+
+
+def _pix_info(mp: dict) -> dict:
+    tx = (mp.get("point_of_interaction") or {}).get("transaction_data") or {}
+    return {
+        "qr_code": tx.get("qr_code"),
+        "qr_code_base64": tx.get("qr_code_base64"),
+        "ticket_url": tx.get("ticket_url") or (mp.get("transaction_details") or {}).get("external_resource_url"),
+    }
+
+
+async def _mark_os_paid_in_supabase(os_number: str, amount, payment_id: str):
+    """Append a payment note to that single OS (no schema change)."""
+    pay = await db.payments.find_one({"os_number": os_number})
+    if (pay or {}).get("supabase_marked"):
+        return
+    try:
+        row = await sb_get_order(os_number) or {}
+        stamp = datetime.now(timezone.utc).astimezone(timezone(timedelta(hours=-3))).strftime("%d/%m/%Y %H:%M")
+        note = f"[SITE] Taxa de visita PAGA via Mercado Pago em {stamp} — R$ {float(amount or 0):.2f} (pagamento {payment_id})"
+        obs = (row.get("observations") or "").strip()
+        await sb_update_order(os_number, {"observations": f"{obs}\n{note}".strip()})
+        await db.payments.update_one({"os_number": os_number}, {"$set": {"supabase_marked": True}})
+    except Exception as e:
+        logger.warning(f"[mp] could not mark OS {os_number} paid in Supabase: {e}")
+
+
+async def _on_payment_update(os_number: str, mp: dict):
+    status = mp.get("status", "pending")
+    payment_id = str(mp.get("id"))
+    prev = await db.payments.find_one({"os_number": os_number}) or {}
+    upd = {
+        "status": status, "mp_payment_id": payment_id,
+        "status_detail": mp.get("status_detail"),
+        "payment_method_id": mp.get("payment_method_id"),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    info = _pix_info(mp)
+    if info.get("qr_code") or info.get("ticket_url"):
+        upd["instructions"] = info
+    await db.payments.update_one({"os_number": os_number}, {"$set": upd}, upsert=True)
+    if status == "approved" and prev.get("status") != "approved":
+        await _mark_os_paid_in_supabase(os_number, mp.get("transaction_amount") or prev.get("amount"), payment_id)
+        to = prev.get("user_email")
+        if to:
+            asyncio.create_task(email_payment_approved(to, os_number, prev.get("amount")))
+
+
+@api_router.post("/service-orders/{os_number}/pay")
+async def pay_os_brick(os_number: str, data: BrickPaymentIn, request: Request):
+    """Process a Payment Brick submission. Amount always comes from the OS."""
+    if not _mp_configured():
+        raise HTTPException(status_code=503, detail="Pagamento indisponível no momento")
+    user = await get_current_user(request)
+    row = await _assert_os_owner(os_number, user)
+    existing = await db.payments.find_one({"os_number": os_number}) or {}
+    if existing.get("status") == "approved":
+        raise HTTPException(status_code=409, detail="Taxa de visita já paga")
+
+    amount = _parse_fee(row.get("visit_fee"))
+    payer = dict(data.payer or {})
+    payer.setdefault("email", user.get("email"))
+    body = {
+        "transaction_amount": amount,
+        "description": f"Taxa de visita — OS {os_number}",
+        "external_reference": os_number,
+        "payment_method_id": data.payment_method_id,
+        "payer": payer,
+        "notification_url": f"{PUBLIC_APP_URL}/api/payments/webhook",
+        "statement_descriptor": "MASTERMAQ",
+    }
+    if data.token:
+        body["token"] = data.token
+    if data.installments:
+        body["installments"] = data.installments
+    if data.issuer_id:
+        body["issuer_id"] = int(data.issuer_id) if str(data.issuer_id).isdigit() else data.issuer_id
+    if data.transaction_details:
+        body["transaction_details"] = data.transaction_details
+
+    await db.payments.update_one(
+        {"os_number": os_number},
+        {"$set": {"os_number": os_number, "amount": amount, "provider": "mercadopago",
+                  "user_email": (user.get("email") or "").lower(),
+                  "updated_at": datetime.now(timezone.utc).isoformat()},
+         "$setOnInsert": {"created_at": datetime.now(timezone.utc).isoformat(), "status": "unpaid"}},
+        upsert=True,
+    )
+
+    def _do():
+        import requests as _req
+        return _req.post(
+            f"{MP_API}/v1/payments", json=body, timeout=20,
+            headers={"Authorization": f"Bearer {MP_ACCESS_TOKEN}", "Content-Type": "application/json",
+                     "X-Idempotency-Key": str(uuid.uuid4())},
+        )
+    resp = await asyncio.get_event_loop().run_in_executor(None, _do)
+    if resp.status_code not in (200, 201):
+        logger.warning(f"[mp] payment failed {resp.status_code}: {resp.text[:300]}")
+        raise HTTPException(status_code=400, detail="O Mercado Pago recusou os dados do pagamento. Confira e tente novamente.")
+    mp = resp.json()
+    await _on_payment_update(os_number, mp)
+    return {"id": mp.get("id"), "status": mp.get("status"), "status_detail": mp.get("status_detail"),
+            "payment_method_id": mp.get("payment_method_id"), **_pix_info(mp)}
+
+
 @api_router.get("/service-orders/{os_number}/payment-status")
 async def get_payment_status(os_number: str, request: Request):
     user = await get_current_user(request)
@@ -948,6 +1062,8 @@ async def get_payment_status(os_number: str, request: Request):
         "amount": pay.get("amount"),
         "provider": pay.get("provider"),
         "mp_payment_id": pay.get("mp_payment_id"),
+        "payment_method_id": pay.get("payment_method_id"),
+        "instructions": pay.get("instructions") if pay.get("status") in ("pending", "in_process") else None,
     }
 
 
@@ -1011,24 +1127,7 @@ async def mp_webhook(request: Request):
     os_number = payment.get("external_reference")
     if not os_number:
         return {"ok": True}
-    await db.payments.update_one(
-        {"os_number": os_number},
-        {"$set": {
-            "status": payment.get("status", "pending"),
-            "mp_payment_id": payment_id,
-            "status_detail": payment.get("status_detail"),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-        }},
-        upsert=True,
-    )
-    if payment.get("status") == "approved":
-        pay = await db.payments.find_one({"os_number": os_number})
-        to = (pay or {}).get("user_email")
-        if to:
-            try:
-                asyncio.create_task(email_payment_approved(to, os_number, (pay or {}).get("amount")))
-            except Exception:
-                pass
+    await _on_payment_update(os_number, payment)
     logger.info(f"[mp-webhook] OS={os_number} payment={payment_id} status={payment.get('status')}")
     return {"ok": True}
 
