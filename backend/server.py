@@ -899,23 +899,6 @@ async def _compute_visit_fee(row: dict, user_email: str = "") -> dict:
     return {"amount": _fee_for_km(km), "rule": "distancia", "km": km}
 
 
-async def _mp_create_preference(payload: dict) -> dict:
-    def _do():
-        import requests as _req
-        return _req.post(
-            f"{MP_API}/checkout/preferences",
-            json=payload,
-            headers={"Authorization": f"Bearer {MP_ACCESS_TOKEN}", "Content-Type": "application/json"},
-            timeout=15,
-        )
-    loop = asyncio.get_event_loop()
-    resp = await loop.run_in_executor(None, _do)
-    if resp.status_code not in (200, 201):
-        logger.warning(f"[mp] create preference failed {resp.status_code}: {resp.text[:200]}")
-        raise HTTPException(status_code=502, detail="Falha ao iniciar pagamento no Mercado Pago")
-    return resp.json()
-
-
 async def _mp_get_payment(payment_id: str) -> dict:
     def _do():
         import requests as _req
@@ -940,69 +923,6 @@ async def _assert_os_owner(os_number: str, user: dict) -> dict:
     if user.get("role") != "admin" and owner_email and owner_email != user_email:
         raise HTTPException(status_code=403, detail="Acesso negado a esta OS")
     return row
-
-
-@api_router.post("/service-orders/{os_number}/checkout")
-async def create_payment_checkout(os_number: str, request: Request):
-    """Create a Mercado Pago Checkout Pro preference for the OS visit fee.
-    Amount comes from the OS (Supabase) — never from the client."""
-    user = await get_current_user(request)
-    row = await _assert_os_owner(os_number, user)
-
-    existing = await db.payments.find_one({"os_number": os_number})
-    if existing and existing.get("status") == "approved":
-        raise HTTPException(status_code=409, detail="Taxa de visita já paga")
-
-    amount = (await _compute_visit_fee(row, user.get("email")))["amount"]
-    back = f"{PUBLIC_APP_URL}/pagamento?os={os_number}"
-
-    if not _mp_configured():
-        # MODO SIMULADO — chaves do Mercado Pago ainda não configuradas.
-        await db.payments.update_one(
-            {"os_number": os_number},
-            {"$set": {
-                "os_number": os_number, "amount": amount, "status": "pending",
-                "provider": "mock", "user_email": (user.get("email") or "").lower(),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            }, "$setOnInsert": {"created_at": datetime.now(timezone.utc).isoformat()}},
-            upsert=True,
-        )
-        return {
-            "mock": True,
-            "amount": amount,
-            "init_point": f"{back}&mock=1",
-            "preference_id": f"mock-{os_number}",
-        }
-
-    payload = {
-        "items": [{
-            "id": os_number, "title": f"Taxa de visita — OS {os_number}",
-            "quantity": 1, "currency_id": "BRL", "unit_price": amount,
-        }],
-        "external_reference": os_number,
-        "notification_url": f"{PUBLIC_APP_URL}/api/payments/webhook",
-        "back_urls": {"success": back, "pending": back, "failure": back},
-        "auto_return": "approved",
-        "statement_descriptor": "MASTERMAQ",
-        "payer": {"email": (user.get("email") or "")},
-    }
-    pref = await _mp_create_preference(payload)
-    await db.payments.update_one(
-        {"os_number": os_number},
-        {"$set": {
-            "os_number": os_number, "amount": amount, "status": "pending",
-            "provider": "mercadopago", "mp_preference_id": pref.get("id"),
-            "user_email": (user.get("email") or "").lower(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-        }, "$setOnInsert": {"created_at": datetime.now(timezone.utc).isoformat()}},
-        upsert=True,
-    )
-    return {
-        "mock": False,
-        "amount": amount,
-        "preference_id": pref.get("id"),
-        "init_point": pref.get("init_point") or pref.get("sandbox_init_point"),
-    }
 
 
 class BrickPaymentIn(BaseModel):

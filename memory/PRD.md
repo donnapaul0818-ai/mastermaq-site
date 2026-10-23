@@ -20,7 +20,6 @@ blog, landing VRF Hisense, IA "Mi", pagamento da taxa de visita.
   address, number, neighborhood, city, state, complement, reference_point, phone1
 - `POST /api/service-orders` — cria OS (push externo síncrono, retorna número)
 - `POST /api/service-orders/{os}/pay` — Mercado Pago Payment Brick (transparente, /v1/payments; valor = visit_fee do Supabase, padrão R$150)
-- (legado) `POST /api/service-orders/{os}/checkout` — Checkout Pro, não usado pelo front
 - `GET /api/service-orders/{os}/payment-status` — status do pagamento (Mongo)
 - `POST /api/payments/webhook` — notificação MP (assinatura HMAC quando secret setado)
 - `POST /api/payments/mock/{os}` — DEV: simula pagamento (só sem access token)
@@ -52,3 +51,5 @@ Admin: admin@mastermaq.com / mastermaq@2026 (Mongo local).
   cache em Mongo `fee_cache`; falha na busca => R$150. Página /pagamento mostra os km.
 - Novas autorizadas: Invisacook, Viking, Daikin, Elettromec, Tecno (Home, agendamento, Mi, SEO, llms.txt, noscript).
 - Usuário: NUNCA chamar testing agent — ele mesmo valida.
+- Checkout Pro removido (2026-06). Conta MP (mastermaqassistencia@gmail.com) NÃO tem Pix habilitado (sem chave Pix) e
+  débito disponível só Elo débito + Débito Virtual CAIXA (limitação do MP). Pagar com a própria conta vendedora é bloqueado pelo MP.
