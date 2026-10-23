@@ -144,7 +144,7 @@ export default function SchedulingModal({ open, onClose, equipment }) {
 
   const onWarrantyChange = (v) => {
     setFormData(p => ({ ...p, warranty_status: v }));
-    if (v === 'dentro_garantia') setWarrantyDialog(true);
+    if (v === 'dentro_garantia' && serviceType !== 'instalação') setWarrantyDialog(true);
   };
 
   const handleSubmit = async () => {
@@ -478,7 +478,7 @@ export default function SchedulingModal({ open, onClose, equipment }) {
                       <Label htmlFor="w-out" className="text-sm text-slate-700 cursor-pointer">Fora da garantia</Label>
                     </div>
                   </RadioGroup>
-                  {formData.warranty_status === 'dentro_garantia' && (
+                  {formData.warranty_status === 'dentro_garantia' && serviceType !== 'instalação' && (
                     <button type="button" onClick={() => setWarrantyDialog(true)} className="mt-2 text-[12px] text-blue-600 hover:text-blue-800 inline-flex items-center gap-1" data-testid="warranty-reopen">
                       <Info className="w-3.5 h-3.5" /> Ver orientação para atendimento em garantia
                     </button>
