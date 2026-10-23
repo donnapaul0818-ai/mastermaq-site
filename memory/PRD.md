@@ -44,3 +44,11 @@ blog, landing VRF Hisense, IA "Mi", pagamento da taxa de visita.
 
 ## Credenciais de teste
 Admin: admin@mastermaq.com / mastermaq@2026 (Mongo local).
+
+## 2026-06 — Taxa de visita + novas marcas
+- Cálculo da taxa (`_compute_visit_fee` em server.py): email donna.paul0818@gmail.com = R$1 (teste);
+  `visit_fee` do Supabase tem prioridade; BH = R$100; até 60 km de carro = R$150;
+  >60 km = R$200 × km/60 (proporcional). Distância: Nominatim + OSRM (grátis) a partir da R. Descalvado 636A,
+  cache em Mongo `fee_cache`; falha na busca => R$150. Página /pagamento mostra os km.
+- Novas autorizadas: Invisacook, Viking, Daikin, Elettromec, Tecno (Home, agendamento, Mi, SEO, llms.txt, noscript).
+- Usuário: NUNCA chamar testing agent — ele mesmo valida.

@@ -37,10 +37,10 @@ const BRANDS = [
   { name: "Franke", logo: "/images/assets/franke-logo.png" },
   { name: "Gorenje", logo: "/images/assets/gorenje-logo.png" },
   { name: "Lofra", logo: "/images/assets/lofra-logo.png" },
-  { name: "Invisacook", logo: null },
+  { name: "Invisacook", logo: "/images/assets/invisacook-logo.png" },
   { name: "Viking", logo: "/images/assets/viking-logo.png" },
-  { name: "Daikin", logo: null },
-  { name: "Elettromec", logo: null },
+  { name: "Daikin", logo: "/images/assets/daikin-logo.png" },
+  { name: "Elettromec", logo: "/images/assets/elettromec-logo.png" },
   { name: "Tecno", logo: "/images/assets/tecno-logo.png" },
 ];
 

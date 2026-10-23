@@ -269,6 +269,9 @@ const BRAND_LOGOS = [
   { name: "Samsung", src: "/images/assets/samsung-logo.png" },
   { name: "Tecno", src: "/images/assets/tecno-logo.png" },
   { name: "Viking", src: "/images/assets/viking-logo.png" },
+  { name: "Invisacook", src: "/images/assets/invisacook-logo.png" },
+  { name: "Daikin", src: "/images/assets/daikin-logo.png" },
+  { name: "Elettromec", src: "/images/assets/elettromec-logo.png" },
 ];
 
 const AUTHORIZED_BRANDS = [
@@ -317,7 +320,7 @@ const AUTHORIZED_BRANDS = [
   },
   {
     name: "Invisacook",
-    logo: null,
+    logo: "/images/assets/invisacook-logo.png",
     title: "Autorizada Invisacook",
     desc: "Atuamos no diagnóstico e conserto de cooktops de indução invisíveis Invisacook. Oferecemos atendimento especializado e cuidadoso, com foco em preservar as características originais do equipamento.",
   },
@@ -329,13 +332,13 @@ const AUTHORIZED_BRANDS = [
   },
   {
     name: "Daikin",
-    logo: null,
+    logo: "/images/assets/daikin-logo.png",
     title: "Autorizada Daikin",
     desc: "Atuamos no diagnóstico e reparo de ar-condicionado Daikin residencial e comercial, incluindo sistemas Split, Multi Split, SkyAir e VRV, conforme o modelo. Oferecemos atendimento técnico especializado e cuidadoso, voltado ao desempenho e à preservação do equipamento.",
   },
   {
     name: "Elettromec",
-    logo: null,
+    logo: "/images/assets/elettromec-logo.png",
     title: "Autorizada Elettromec",
     desc: "Atuamos no conserto de eletrodomésticos Elettromec, como cooktops, fogões, fornos, coifas, refrigeradores, adegas e lava-louças. Oferecemos serviço especializado, com cuidado para preservar as características originais do aparelho.",
   },
