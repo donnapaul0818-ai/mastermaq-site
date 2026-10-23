@@ -514,6 +514,13 @@ function AuthorizedCarousel() {
               <h3 className="font-heading font-semibold text-sm text-slate-900 mb-2">{brand.title}</h3>
               <p className="text-[12px] text-slate-500 leading-relaxed">{brand.desc}</p>
             </div>
+            <div className="px-6 pb-5 flex gap-4">
+              {brand.name.split(' & ').map((n) => (
+                <Link key={n} to={`/autorizada/${n.toLowerCase()}`} className="text-[12px] font-medium text-blue-600 hover:text-blue-800" data-testid={`auth-brand-page-link-${n.toLowerCase()}`}>
+                  Saiba mais{brand.name.includes('&') ? ` ${n}` : ''} →
+                </Link>
+              ))}
+            </div>
           </div>
         ))}
       </div>

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { findBrandPage } from "@/data/brandPages";
 
 const SITE_URL = "https://mastermaqassistencia.com.br";
 const SITE_NAME = "Mastermaq Assistência Técnica";
@@ -10,6 +11,17 @@ const BASE_KEYWORDS =
 
 // SEO config per route. For dynamic routes we match by prefix.
 const SEO_MAP = [
+  {
+    match: (p) => p.startsWith("/autorizada/") && !!findBrandPage(p.split("/")[2]),
+    dynamic: (p) => {
+      const b = findBrandPage(p.split("/")[2]);
+      return {
+        title: `${b.label} em BH — Conserto ${b.name} | Mastermaq`,
+        description: `${b.label} em Belo Horizonte: conserto e manutenção de ${b.products.slice(0, 3).join(", ").toLowerCase()} ${b.name} com peças originais e garantia de 90 dias.`,
+        keywords: `${b.label.toLowerCase()} BH, assistência técnica ${b.name} Belo Horizonte, conserto ${b.name} BH, ${b.name} autorizada, ` + BASE_KEYWORDS,
+      };
+    },
+  },
   {
     match: (p) => p === "/",
     title: "Mastermaq — Assistência Técnica Autorizada em BH/MG",
@@ -109,7 +121,8 @@ export default function RouteSEO() {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    const cfg = SEO_MAP.find((c) => c.match(pathname)) || DEFAULT_SEO;
+    const hit = SEO_MAP.find((c) => c.match(pathname));
+    const cfg = hit ? (hit.dynamic ? hit.dynamic(pathname) : hit) : DEFAULT_SEO;
     const url = `${SITE_URL}${pathname === "/" ? "" : pathname}`;
 
     // Title

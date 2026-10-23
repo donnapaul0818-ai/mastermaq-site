@@ -53,3 +53,6 @@ Admin: admin@mastermaq.com / mastermaq@2026 (Mongo local).
 - Usuário: NUNCA chamar testing agent — ele mesmo valida.
 - Checkout Pro removido (2026-06). Conta MP (mastermaqassistencia@gmail.com) NÃO tem Pix habilitado (sem chave Pix) e
   débito disponível só Elo débito + Débito Virtual CAIXA (limitação do MP). Pagar com a própria conta vendedora é bloqueado pelo MP.
+- 2026-06: Páginas por marca `/autorizada/:slug` (13 marcas, +500 palavras cada) — dados em `src/data/brandPages.js`,
+  página `src/pages/BrandPage.js`, SEO dinâmico no RouteSEO, sitemap + llms.txt atualizados, links "Saiba mais" na Home.
+  Crédito só 1x (front + back), selo "Parcelamento disponível" oculto via CSS.
