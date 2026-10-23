@@ -712,11 +712,11 @@ function TypingDots() {
   );
 }
 
-const AUTHORIZED_BRANDS_SET = new Set(["HQ", "Franke", "Hisense", "Gorenje", "Bertazzoni", "Lofra", "Panasonic", "Liebherr"]);
+const AUTHORIZED_BRANDS_SET = new Set(["HQ", "Franke", "Hisense", "Gorenje", "Bertazzoni", "Lofra", "Panasonic", "Liebherr", "Invisacook", "Viking", "Daikin", "Elettromec", "Tecno"]);
 // Authorized for service, but CANNOT accept warranty cases per business rules.
 const WARRANTY_BLOCKED_BRANDS = new Set(["Bertazzoni", "Lofra", "Panasonic"]);
 // Visual order of authorized brands in the combobox.
-const AUTHORIZED_BRANDS_ORDERED = ["HQ", "Franke", "Hisense", "Gorenje", "Bertazzoni", "Lofra", "Panasonic", "Liebherr"];
+const AUTHORIZED_BRANDS_ORDERED = ["HQ", "Franke", "Hisense", "Gorenje", "Bertazzoni", "Lofra", "Panasonic", "Liebherr", "Invisacook", "Viking", "Daikin", "Elettromec", "Tecno"];
 const OTHER_BRANDS_PLACEHOLDER = '__other__';
 
 function ScheduleCard({ widget, equipmentTypes, brands, loggedIn, userProfile, onSubmit, onDismiss }) {

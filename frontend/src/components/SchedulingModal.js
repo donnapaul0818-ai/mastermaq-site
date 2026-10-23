@@ -37,6 +37,11 @@ const BRANDS = [
   { name: "Franke", logo: "/images/assets/franke-logo.png" },
   { name: "Gorenje", logo: "/images/assets/gorenje-logo.png" },
   { name: "Lofra", logo: "/images/assets/lofra-logo.png" },
+  { name: "Invisacook", logo: null },
+  { name: "Viking", logo: "/images/assets/viking-logo.png" },
+  { name: "Daikin", logo: null },
+  { name: "Elettromec", logo: null },
+  { name: "Tecno", logo: "/images/assets/tecno-logo.png" },
 ];
 
 const ICON_MAP = {
@@ -351,7 +356,9 @@ export default function SchedulingModal({ open, onClose, equipment }) {
                         <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-slate-900 flex items-center justify-center"><Check className="w-3 h-3 text-white" /></div>
                       )}
                       <div className="h-10 flex items-center justify-center grayscale group-hover:grayscale-0 transition-all duration-300">
-                        <img src={b.logo} alt={b.name} className="max-h-[32px] max-w-[80px] object-contain" />
+                        {b.logo
+                          ? <img src={b.logo} alt={b.name} className="max-h-[32px] max-w-[80px] object-contain" />
+                          : <span className="font-heading text-sm font-bold text-slate-800">{b.name}</span>}
                       </div>
                       <span className="text-[10px] font-medium text-slate-500 group-hover:text-slate-700">{b.name}</span>
                     </button>

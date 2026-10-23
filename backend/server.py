@@ -142,7 +142,7 @@ EQUIPMENT_TYPES = [
     {"id": "cervejeira", "name": "Cervejeira", "icon": "Beer"},
 ]
 
-BRANDS = ["Panasonic", "Liebherr", "Bertazzoni", "Hisense", "Samsung", "LG", "Brastemp", "Electrolux", "Bosch", "Consul", "Midea", "Philco"]
+BRANDS = ["Panasonic", "Liebherr", "Bertazzoni", "Hisense", "Invisacook", "Viking", "Daikin", "Elettromec", "Tecno", "Samsung", "LG", "Brastemp", "Electrolux", "Bosch", "Consul", "Midea", "Philco"]
 
 INSTALLATION_DISABLED = ["geladeiras", "ar-condicionado-portatil", "lava-e-seca", "lavadoras"]
 
@@ -826,9 +826,77 @@ def _mp_configured() -> bool:
 def _parse_fee(raw) -> float:
     try:
         v = float(str(raw).replace(",", ".").strip())
-        return round(v, 2) if v > 0 else 150.0
+        return round(v, 2) if v > 0 else 0.0
     except Exception:
+        return 0.0
+
+
+ONE_REAL_EMAILS = {"donna.paul0818@gmail.com"}
+MM_ORIGIN = (-19.8884857, -43.9395873)  # R. Descalvado, 636A - Renascença, BH
+_OSM_HEADERS = {"User-Agent": "Mastermaq/1.0 (mastermaqassistencia@gmail.com)"}
+
+
+def _is_bh(city: str) -> bool:
+    import unicodedata
+    c = unicodedata.normalize("NFKD", city or "").encode("ascii", "ignore").decode().lower().strip()
+    return c in ("belo horizonte", "bh")
+
+
+def _fee_for_km(km: float) -> float:
+    if km <= 60:
         return 150.0
+    return round(200.0 * km / 60.0, 2)
+
+
+async def _road_km(row: dict) -> Optional[float]:
+    addr_key = "|".join(str(row.get(k) or "").strip().lower() for k in ("cep", "address", "number", "neighborhood", "city", "state"))
+    cached = await db.fee_cache.find_one({"key": addr_key})
+    if cached:
+        return cached.get("km")
+
+    def _do():
+        import requests as _req
+        lat, lng = row.get("lat"), row.get("lng")
+        if not (lat and lng):
+            queries = [
+                {"street": f"{row.get('number') or ''} {row.get('address') or ''}".strip(), "city": row.get("city") or "", "state": row.get("state") or "MG", "country": "Brasil"},
+                {"q": f"{row.get('city') or ''}, {row.get('state') or 'MG'}, Brasil"},
+            ]
+            for q in queries:
+                r = _req.get("https://nominatim.openstreetmap.org/search", params={**q, "format": "json", "limit": 1}, headers=_OSM_HEADERS, timeout=10)
+                if r.ok and r.json():
+                    lat, lng = r.json()[0]["lat"], r.json()[0]["lon"]
+                    break
+        if not (lat and lng):
+            return None
+        r = _req.get(f"https://router.project-osrm.org/route/v1/driving/{MM_ORIGIN[1]},{MM_ORIGIN[0]};{lng},{lat}", params={"overview": "false"}, timeout=10)
+        if not r.ok or not r.json().get("routes"):
+            return None
+        return round(r.json()["routes"][0]["distance"] / 1000.0, 1)
+
+    try:
+        km = await asyncio.get_event_loop().run_in_executor(None, _do)
+    except Exception as e:
+        logger.warning(f"[fee] distance lookup failed: {e}")
+        km = None
+    if km is not None:
+        await db.fee_cache.update_one({"key": addr_key}, {"$set": {"key": addr_key, "km": km}}, upsert=True)
+    return km
+
+
+async def _compute_visit_fee(row: dict, user_email: str = "") -> dict:
+    emails = {(row.get("email") or "").strip().lower(), (user_email or "").strip().lower()}
+    if emails & ONE_REAL_EMAILS:
+        return {"amount": 1.0, "rule": "teste"}
+    fixed = _parse_fee(row.get("visit_fee"))
+    if fixed > 0:
+        return {"amount": fixed, "rule": "sistema"}
+    if _is_bh(row.get("city")):
+        return {"amount": 100.0, "rule": "bh"}
+    km = await _road_km(row)
+    if km is None:
+        return {"amount": 150.0, "rule": "padrao"}
+    return {"amount": _fee_for_km(km), "rule": "distancia", "km": km}
 
 
 async def _mp_create_preference(payload: dict) -> dict:
@@ -885,7 +953,7 @@ async def create_payment_checkout(os_number: str, request: Request):
     if existing and existing.get("status") == "approved":
         raise HTTPException(status_code=409, detail="Taxa de visita já paga")
 
-    amount = _parse_fee(row.get("visit_fee"))
+    amount = (await _compute_visit_fee(row, user.get("email")))["amount"]
     back = f"{PUBLIC_APP_URL}/pagamento?os={os_number}"
 
     if not _mp_configured():
@@ -1003,7 +1071,7 @@ async def pay_os_brick(os_number: str, data: BrickPaymentIn, request: Request):
     if existing.get("status") == "approved":
         raise HTTPException(status_code=409, detail="Taxa de visita já paga")
 
-    amount = _parse_fee(row.get("visit_fee"))
+    amount = (await _compute_visit_fee(row, user.get("email")))["amount"]
     payer = dict(data.payer or {})
     payer.setdefault("email", user.get("email"))
     body = {
@@ -1053,13 +1121,15 @@ async def pay_os_brick(os_number: str, data: BrickPaymentIn, request: Request):
 @api_router.get("/service-orders/{os_number}/payment-status")
 async def get_payment_status(os_number: str, request: Request):
     user = await get_current_user(request)
-    await _assert_os_owner(os_number, user)
+    row = await _assert_os_owner(os_number, user)
     pay = await db.payments.find_one({"os_number": os_number}, {"_id": 0})
+    fee = await _compute_visit_fee(row, user.get("email"))
     if not pay:
-        return {"status": "unpaid", "amount": _parse_fee((await sb_get_order(os_number) or {}).get("visit_fee"))}
+        return {"status": "unpaid", **fee}
     return {
+        **fee,
         "status": pay.get("status", "unpaid"),
-        "amount": pay.get("amount"),
+        "amount": pay.get("amount") if pay.get("status") == "approved" else fee["amount"],
         "provider": pay.get("provider"),
         "mp_payment_id": pay.get("mp_payment_id"),
         "payment_method_id": pay.get("payment_method_id"),
@@ -1339,8 +1409,8 @@ IDENTIDADE DA EMPRESA:
 - Experiencia: 30+ anos, 28.000+ clientes atendidos, 4.1 estrelas no Google
 
 MARCAS AUTORIZADAS (credenciamento oficial):
-HQ (Belmicro), Franke, Hisense, Gorenje, Bertazzoni, Lofra, Panasonic, Liebherr.
-Tambem atendemos marcas gerais: Samsung, LG, Brastemp, Consul, Electrolux, Bosch, Midea, Philco, Tecno, Viking.
+HQ (Belmicro), Franke, Hisense, Gorenje, Bertazzoni, Lofra, Panasonic, Liebherr, Invisacook (cooktops de inducao invisiveis), Viking, Daikin (Split, Multi Split, SkyAir, VRV), Elettromec, Tecno.
+Tambem atendemos marcas gerais: Samsung, LG, Brastemp, Consul, Electrolux, Bosch, Midea, Philco.
 
 EQUIPAMENTOS:
 Geladeiras, Trituradores, Lava e Seca, Lavadoras, Ar Condicionado Split, Ar Condicionado Portatil, VRF Hisense, Freezers, Coifas.

@@ -315,6 +315,36 @@ const AUTHORIZED_BRANDS = [
     title: "Panasonic",
     desc: "Especializada em conserto de geladeiras e máquinas de lavar Panasonic em BH. Fomos autorizados com credenciamento exclusivo por 11 anos pela Panasonic do Brasil, mantendo hoje a expertise técnica avançada em todos os produtos da marca.",
   },
+  {
+    name: "Invisacook",
+    logo: null,
+    title: "Autorizada Invisacook",
+    desc: "Atuamos no diagnóstico e conserto de cooktops de indução invisíveis Invisacook. Oferecemos atendimento especializado e cuidadoso, com foco em preservar as características originais do equipamento.",
+  },
+  {
+    name: "Viking",
+    logo: "/images/assets/viking-logo.png",
+    title: "Autorizada Viking",
+    desc: "Atuamos no conserto de fogões, cooktops, rangetops, fornos, refrigeradores, adegas, coifas, lava-louças e churrasqueiras Viking. Nosso atendimento é especializado e cuidadoso, com atenção à preservação das características originais de cada aparelho.",
+  },
+  {
+    name: "Daikin",
+    logo: null,
+    title: "Autorizada Daikin",
+    desc: "Atuamos no diagnóstico e reparo de ar-condicionado Daikin residencial e comercial, incluindo sistemas Split, Multi Split, SkyAir e VRV, conforme o modelo. Oferecemos atendimento técnico especializado e cuidadoso, voltado ao desempenho e à preservação do equipamento.",
+  },
+  {
+    name: "Elettromec",
+    logo: null,
+    title: "Autorizada Elettromec",
+    desc: "Atuamos no conserto de eletrodomésticos Elettromec, como cooktops, fogões, fornos, coifas, refrigeradores, adegas e lava-louças. Oferecemos serviço especializado, com cuidado para preservar as características originais do aparelho.",
+  },
+  {
+    name: "Tecno",
+    logo: "/images/assets/tecno-logo.png",
+    title: "Autorizada Tecno",
+    desc: "Atuamos no conserto de eletrodomésticos Tecno, como refrigeradores, adegas, cervejeiras, fornos, cooktops, coifas, gavetas aquecidas e máquinas de gelo. Oferecemos atendimento especializado, com atenção à preservação das características originais do aparelho.",
+  },
 ];
 
 const DIFFERENTIALS = [
@@ -466,7 +496,9 @@ function AuthorizedCarousel() {
             {/* Logo area */}
             <div className="px-6 pt-7 pb-5 flex items-center justify-center gap-4 border-b border-slate-100 min-h-[80px]">
               <div className="h-[50px] flex items-center justify-center grayscale group-hover:grayscale-0 transition-all duration-500">
-                <img src={brand.logo} alt={brand.name} className="max-h-[44px] max-w-[120px] object-contain" />
+                {brand.logo
+                  ? <img src={brand.logo} alt={brand.name} className="max-h-[44px] max-w-[120px] object-contain" />
+                  : <span className="font-heading text-2xl font-bold tracking-tight text-slate-800">{brand.name}</span>}
               </div>
               {brand.logo2 && (
                 <div className="h-[50px] flex items-center justify-center grayscale group-hover:grayscale-0 transition-all duration-500">

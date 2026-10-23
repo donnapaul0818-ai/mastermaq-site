@@ -6,7 +6,7 @@ const SITE_NAME = "Mastermaq Assistência Técnica";
 const DEFAULT_IMAGE = `${SITE_URL}/icons/icon-512.png`;
 
 const BASE_KEYWORDS =
-  "assistência técnica, conserto de eletrodomésticos, Belo Horizonte, BH, Mastermaq, autorizada, geladeira, lava e seca, lavadora, ar condicionado split, ar condicionado portátil, VRF Hisense, freezer, coifa, cooktop, triturador, lava-louças, forno elétrico, micro-ondas, frigobar, cervejeira, máquina de gelo";
+  "assistência técnica, conserto de eletrodomésticos, Belo Horizonte, BH, Mastermaq, autorizada, geladeira, lava e seca, lavadora, ar condicionado split, ar condicionado portátil, VRF Hisense, freezer, coifa, cooktop, triturador, lava-louças, forno elétrico, micro-ondas, frigobar, cervejeira, máquina de gelo, autorizada Viking, autorizada Daikin, autorizada Elettromec, autorizada Tecno, conserto cooktop Invisacook";
 
 // SEO config per route. For dynamic routes we match by prefix.
 const SEO_MAP = [

@@ -47,6 +47,7 @@ export default function PaymentPage() {
   const [status, setStatus] = useState('loading');
   const [amount, setAmount] = useState(null);
   const [info, setInfo] = useState(null);
+  const [km, setKm] = useState(null);
   const [retry, setRetry] = useState(false);
 
   const fetchStatus = useCallback(async () => {
@@ -56,6 +57,7 @@ export default function PaymentPage() {
       setStatus(data.status || 'unpaid');
       if (data.amount != null) setAmount(data.amount);
       if (data.instructions) setInfo(data.instructions);
+      setKm(data.rule === 'distancia' ? data.km : null);
     } catch {
       setStatus('unpaid');
     }
@@ -104,6 +106,9 @@ export default function PaymentPage() {
           <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Taxa de visita</span>
           <span className="font-heading text-lg font-semibold text-slate-900" data-testid="payment-amount">{money(amount)}</span>
         </div>
+        {km != null && status !== 'approved' && (
+          <p className="text-[12px] text-slate-400 -mt-3 mb-5" data-testid="payment-distance">Calculada pela distância até o endereço: {String(km).replace('.', ',')} km</p>
+        )}
 
         {['pending', 'in_process'].includes(status) && !retry && <Instructions info={info} />}
 
