@@ -21,7 +21,7 @@ export const PaymentBrickBox = ({ osNumber, amount, onResult }) => {
 
   const initialization = useMemo(() => ({ amount: Number(amount) }), [amount]);
   const customization = useMemo(() => ({
-    paymentMethods: { bankTransfer: 'all', creditCard: 'all', debitCard: 'all', ticket: 'all', maxInstallments: 1 },
+    paymentMethods: { bankTransfer: 'all', creditCard: 'all', debitCard: 'all', ticket: 'all', minInstallments: 1, maxInstallments: 1 },
     visual: { style: { theme: 'default' } },
   }), []);
 

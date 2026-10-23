@@ -1005,8 +1005,8 @@ async def pay_os_brick(os_number: str, data: BrickPaymentIn, request: Request):
     }
     if data.token:
         body["token"] = data.token
-    if data.installments:
-        body["installments"] = data.installments
+    if data.token:
+        body["installments"] = 1
     if data.issuer_id:
         body["issuer_id"] = int(data.issuer_id) if str(data.issuer_id).isdigit() else data.issuer_id
     if data.transaction_details:

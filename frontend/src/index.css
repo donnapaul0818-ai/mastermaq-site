@@ -103,3 +103,5 @@ code {
         border-bottom-color: inherit;
     }
 }
+
+[data-testid="payment-brick"] [class*="value-prop-"] { display: none !important; }
