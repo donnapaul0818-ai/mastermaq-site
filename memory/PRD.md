@@ -56,3 +56,6 @@ Admin: admin@mastermaq.com / mastermaq@2026 (Mongo local).
 - 2026-06: Páginas por marca `/autorizada/:slug` (13 marcas, +500 palavras cada) — dados em `src/data/brandPages.js`,
   página `src/pages/BrandPage.js`, SEO dinâmico no RouteSEO, sitemap + llms.txt atualizados, links "Saiba mais" na Home.
   Crédito só 1x (front + back), selo "Parcelamento disponível" oculto via CSS.
+- 2026-11: BrandPage redesenhada no estilo da página VRF (hero branco, logo sem caixa, linha atendida, stats, defeitos em grade,
+  processo 01/02/03, CTA escuro com SchedulingModal, faixa de logos). Mi: fallback Ollama Cloud (`_ollama_stream`,
+  OLLAMA_BASE_URL/OLLAMA_MODEL=gpt-oss:120b/OLLAMA_API_KEY) quando a Universal Key falha (sem análise de foto no fallback).

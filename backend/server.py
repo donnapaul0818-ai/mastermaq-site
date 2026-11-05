@@ -1491,12 +1491,54 @@ async def delete_chat_session(session_id: str, request: Request):
     return {"deleted": res.deleted_count}
 
 
+def _primary_llm_stream(msgs, api_key):
+    if not api_key:
+        raise RuntimeError("EMERGENT_LLM_KEY ausente")
+    stream = litellm.completion(
+        model="gpt-5.2", messages=msgs, api_key=api_key, api_base=_get_proxy_base(),
+        custom_llm_provider="openai", stream=True, max_tokens=400,
+    )
+    for chunk in stream:
+        try:
+            delta = chunk.choices[0].delta.content if chunk.choices and chunk.choices[0].delta else None
+        except Exception:
+            delta = None
+        if delta:
+            yield delta
+
+
+def _ollama_stream(msgs):
+    """Fallback for Mi via Ollama Cloud (text only; images become a note)."""
+    import requests as _req
+    plain = []
+    for m in msgs:
+        c = m["content"]
+        if isinstance(c, list):
+            text = " ".join(p.get("text", "") for p in c if p.get("type") == "text")
+            c = (text + " [O cliente enviou uma foto, que nao pode ser analisada agora; peca para descrever o problema.]").strip()
+        plain.append({"role": m["role"], "content": c})
+    r = _req.post(
+        f"{os.environ['OLLAMA_BASE_URL'].rstrip('/')}/api/chat",
+        headers={"Authorization": f"Bearer {os.environ['OLLAMA_API_KEY']}"},
+        json={"model": os.environ["OLLAMA_MODEL"], "messages": plain, "stream": True, "think": "low"},
+        stream=True, timeout=90,
+    )
+    r.raise_for_status()
+    for line in r.iter_lines():
+        if not line:
+            continue
+        data = _json.loads(line)
+        delta = (data.get("message") or {}).get("content")
+        if delta:
+            yield delta
+        if data.get("done"):
+            break
+
+
 @api_router.post("/chat/stream")
 async def chat_stream(payload: ChatStreamRequest, request: Request):
     user = await _get_user_optional(request)
     api_key = _get_llm_api_key()
-    if not api_key:
-        raise HTTPException(status_code=500, detail="LLM key nao configurada")
 
     # Build messages with system prompt at start
     msgs = [{"role": "system", "content": MI_SYSTEM_PROMPT}]
@@ -1549,21 +1591,16 @@ async def chat_stream(payload: ChatStreamRequest, request: Request):
     async def event_gen():
         full_text = ""
         try:
-            stream = litellm.completion(
-                model="gpt-5.2",
-                messages=msgs,
-                api_key=api_key,
-                api_base=_get_proxy_base(),
-                custom_llm_provider="openai",
-                stream=True,
-                max_tokens=400,
-            )
-            for chunk in stream:
-                try:
-                    delta = chunk.choices[0].delta.content if chunk.choices and chunk.choices[0].delta else None
-                except Exception:
-                    delta = None
-                if delta:
+            try:
+                for delta in _primary_llm_stream(msgs, api_key):
+                    full_text += delta
+                    yield f"data: {_json.dumps({'type': 'delta', 'content': delta})}\n\n"
+            except Exception as e:
+                if full_text:
+                    raise
+                logger.warning(f"[mi] universal key failed, falling back to Ollama: {e}")
+            if not full_text:
+                for delta in _ollama_stream(msgs):
                     full_text += delta
                     yield f"data: {_json.dumps({'type': 'delta', 'content': delta})}\n\n"
             # persist assistant response
