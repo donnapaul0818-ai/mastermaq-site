@@ -5,7 +5,7 @@ export const BRAND_PAGES = [
     name: "HQ",
     label: "Autorizada HQ (Belmicro)",
     logo: "/images/assets/hq-logo.png",
-    products: ["Geladeiras e refrigeradores de embutir", "Fornos combinados e fornos elétricos", "Micro-ondas de embutir", "Coifas e depuradores", "Ar-condicionado"],
+    products: [{ name: "Ar-condicionado Split", img: "/images/ar-condicionado-split/hq.png" }, { name: "Ar-condicionado Portátil", img: "/images/ar-condicionado-portatil/hq.png" }, { name: "Freezers", img: "/images/freezers/hq.png" }, { name: "Frigobar", img: "/images/frigobar/hq.png" }, { name: "Cervejeira", img: "/images/cervejeira/hq.png" }, { name: "Lava-louças", img: "/images/lava-loucas/hq.png" }, { name: "Máquina de gelo", img: "/images/maquina-de-gelo/hq.png" }],
     intro: [
       "A Mastermaq é assistência técnica autorizada HQ (Belmicro) em Belo Horizonte, com credenciamento oficial do fabricante. Atendemos a linha completa de eletrodomésticos HQ, desde refrigeradores de embutir até fornos combinados, micro-ondas, coifas e aparelhos de ar-condicionado, sempre com técnicos treinados e peças originais.",
       "Os produtos HQ são pensados para cozinhas planejadas e projetos de alto padrão, o que exige cuidado redobrado na desmontagem, no diagnóstico e na reinstalação. Por isso, cada visita é feita com ferramentas adequadas e atenção ao acabamento dos móveis e ao encaixe original do aparelho.",
@@ -18,7 +18,7 @@ export const BRAND_PAGES = [
     name: "Franke",
     label: "Autorizada Franke",
     logo: "/images/assets/franke-logo.png",
-    products: ["Coifas de parede e de ilha", "Trituradores de alimentos", "Fornos elétricos e micro-ondas de embutir", "Cooktops", "Refrigeradores de embutir"],
+    products: [{ name: "Geladeiras", img: "/images/geladeiras/franke.jpg" }, { name: "Coifas", img: "/images/coifas/franke.png" }, { name: "Cooktops", img: "/images/cooktops/franke.png" }, { name: "Forno elétrico", img: "/images/forno-eletrico/franke.png" }, { name: "Micro-ondas", img: "/images/microondas/franke.png" }, { name: "Lava-louças", img: "/images/lava-loucas/franke.png" }, { name: "Cervejeira", img: "/images/cervejeira/franke.png" }, { name: "Trituradores", img: "/images/trituradores/franke.png" }],
     intro: [
       "Somos assistência técnica autorizada Franke em Belo Horizonte, credenciada pelo fabricante suíço. Realizamos o conserto de coifas, trituradores de alimentos, fornos elétricos, micro-ondas, cooktops e refrigeradores de embutir Franke, preservando a qualidade e o design que fazem da marca uma referência em cozinhas sofisticadas.",
       "Os trituradores Franke, por exemplo, exigem conhecimento específico de motor, vedação e instalação hidráulica. Nossos técnicos conhecem a fundo esses equipamentos e trabalham com peças originais, garantindo segurança no reparo e maior durabilidade do produto.",
@@ -31,7 +31,7 @@ export const BRAND_PAGES = [
     name: "Hisense",
     label: "Autorizada Hisense",
     logo: "/images/assets/hisense-logo.png",
-    products: ["Ar-condicionado Split e Multi Split", "Sistemas VRF Hisense", "Geladeiras e refrigeradores", "Fornos e micro-ondas", "Coifas"],
+    products: [{ name: "Ar-condicionado Split", img: "/images/ar-condicionado-split/hisense.png" }, { name: "Sistemas VRF", img: "/images/vrf/vrf-hero-product.png" }, { name: "Ar-condicionado Portátil", img: "/images/ar-condicionado-portatil/hisense.png" }, { name: "Geladeiras", img: "/images/geladeiras/hisense.png" }, { name: "Freezers", img: "/images/freezers/hisense.png" }, { name: "Lavadoras", img: "/images/lavadoras/hisense.png" }, { name: "Lava e seca", img: "/images/lava-e-seca/hisense.png" }, { name: "Forno elétrico", img: "/images/forno-eletrico/hisense.png" }, { name: "Micro-ondas", img: "/images/microondas/hisense.png" }, { name: "Lava-louças", img: "/images/lava-loucas/hisense.png" }, { name: "Frigobar", img: "/images/frigobar/hisense.png" }, { name: "Cervejeira", img: "/images/cervejeira/hisense.png" }, { name: "Máquina de gelo", img: "/images/maquina-de-gelo/hisense.png" }],
     intro: [
       "A Mastermaq é assistência técnica autorizada Hisense em Belo Horizonte, com credenciamento oficial. Somos referência em ar-condicionado Split, Multi Split e sistemas VRF Hisense, além de atender geladeiras, fornos, micro-ondas e coifas da marca com técnicos homologados.",
       "Em climatização, o diagnóstico correto faz toda a diferença: pressão de gás, placa eletrônica, sensores e drenagem precisam ser avaliados com instrumentos adequados. Em sistemas VRF, oferecemos projeto, instalação e manutenção para residências, escritórios e empreendimentos comerciais.",
@@ -44,7 +44,7 @@ export const BRAND_PAGES = [
     name: "Gorenje",
     label: "Autorizada Gorenje",
     logo: "/images/assets/gorenje-logo.png",
-    products: ["Geladeiras de embutir e retrô", "Fornos combinados e fornos elétricos", "Micro-ondas", "Coifas", "Cooktops"],
+    products: [{ name: "Freezers", img: "/images/freezers/gorenje.png" }, { name: "Frigobar", img: "/images/frigobar/gorenje.png" }, { name: "Lavadoras", img: "/images/lavadoras/gorenje.png" }, { name: "Coifas", img: "/images/coifas/gorenje.png" }, { name: "Cooktops", img: "/images/cooktops/gorenje.png" }, { name: "Forno elétrico", img: "/images/forno-eletrico/gorenje.png" }, { name: "Micro-ondas", img: "/images/microondas/gorenje.png" }, { name: "Lava-louças", img: "/images/lava-loucas/gorenje.png" }, { name: "Cervejeira", img: "/images/cervejeira/gorenje.png" }, { name: "Máquina de gelo", img: "/images/maquina-de-gelo/gorenje.png" }],
     intro: [
       "Somos assistência técnica autorizada Gorenje em Belo Horizonte, credenciada pelo fabricante europeu. Atendemos geladeiras de embutir e da linha retrô, fornos combinados, fornos elétricos, micro-ondas, coifas e cooktops Gorenje, com diagnóstico preciso e manutenção correta.",
       "Os eletrodomésticos Gorenje unem tecnologia eslovena e design marcante. Nosso compromisso é manter esse padrão após o reparo, utilizando peças originais e procedimentos recomendados pelo fabricante, para que o aparelho volte a funcionar como novo.",
@@ -57,7 +57,7 @@ export const BRAND_PAGES = [
     name: "Bertazzoni",
     label: "Autorizada Bertazzoni",
     logo: "/images/assets/bertazzoni-logo.png",
-    products: ["Fogões e ranges italianos", "Cooktops a gás e de indução", "Fornos elétricos e combinados", "Coifas", "Refrigeradores de embutir"],
+    products: [{ name: "Geladeiras", img: "/images/geladeiras/bertazzoni.png" }, { name: "Cooktops", img: "/images/cooktops/bertazzoni.png" }, { name: "Forno elétrico", img: "/images/forno-eletrico/bertazzoni.png" }, { name: "Coifas", img: "/images/coifas/bertazzoni.png" }, { name: "Micro-ondas", img: "/images/microondas/bertazzoni.png" }, { name: "Lava-louças", img: "/images/lava-loucas/bertazzoni.png" }],
     intro: [
       "A Mastermaq é assistência técnica autorizada Bertazzoni em Belo Horizonte, com credenciamento do fabricante italiano. Fazemos o conserto de fogões, ranges, cooktops, fornos, coifas e refrigeradores Bertazzoni, sempre com reparação segura e preservação da originalidade do produto.",
       "Os equipamentos Bertazzoni são conhecidos pela robustez e pelo acabamento artesanal. Queimadores, válvulas de segurança, termostatos e ignição exigem regulagem precisa — e é exatamente nesse nível de detalhe que nossos técnicos trabalham.",
@@ -70,7 +70,7 @@ export const BRAND_PAGES = [
     name: "Lofra",
     label: "Autorizada Lofra",
     logo: "/images/assets/lofra-logo.png",
-    products: ["Fogões e ranges", "Cooktops", "Fornos elétricos", "Coifas", "Micro-ondas"],
+    products: [{ name: "Cooktops", img: "/images/cooktops/lofra.png" }, { name: "Coifas", img: "/images/coifas/lofra.png" }],
     intro: [
       "Somos assistência técnica autorizada Lofra em Belo Horizonte, com credenciamento do fabricante. Atuamos no conserto de fogões, ranges, cooktops, fornos elétricos, coifas e micro-ondas Lofra, com atendimento especializado e peças originais.",
       "A Lofra é sinônimo de tradição italiana em cocção profissional para uso doméstico. Por isso, cada reparo é feito respeitando as especificações técnicas originais, garantindo segurança no uso do gás, estabilidade de temperatura e longa vida útil ao equipamento.",
@@ -83,7 +83,7 @@ export const BRAND_PAGES = [
     name: "Panasonic",
     label: "Assistência Técnica Panasonic",
     logo: "/images/assets/panasonic-logo.png",
-    products: ["Geladeiras e refrigeradores", "Máquinas de lavar", "Lava e seca", "Micro-ondas"],
+    products: [{ name: "Geladeiras", img: "/images/geladeiras/panasonic.png" }, { name: "Lavadoras", img: "/images/lavadoras/panasonic.png" }, { name: "Freezers", img: "/images/freezers/panasonic.png" }, { name: "Ar-condicionado Split", img: "/images/ar-condicionado-split/panasonic.png" }, { name: "Forno elétrico", img: "/images/forno-eletrico/panasonic.png" }, { name: "Micro-ondas", img: "/images/microondas/panasonic.png" }, { name: "Lava-louças", img: "/images/lava-loucas/panasonic.png" }],
     intro: [
       "A Mastermaq é especializada no conserto de geladeiras e máquinas de lavar Panasonic em Belo Horizonte. Fomos autorizados com credenciamento exclusivo por 11 anos pela Panasonic do Brasil e mantemos hoje a expertise técnica avançada em todos os produtos da marca.",
       "Essa trajetória nos dá conhecimento profundo das placas eletrônicas, compressores inverter, sistemas de lavagem e componentes específicos da Panasonic. Fazemos diagnóstico preciso e reparo com peças de qualidade, para que seu aparelho volte a funcionar com eficiência.",
@@ -96,7 +96,7 @@ export const BRAND_PAGES = [
     name: "Liebherr",
     label: "Autorizada Liebherr",
     logo: "/images/assets/liebherr-logo.png",
-    products: ["Geladeiras de embutir", "Adegas climatizadas", "Freezers verticais", "Refrigeradores side by side", "Equipamentos de refrigeração premium"],
+    products: [{ name: "Geladeiras", img: "/images/geladeiras/liebherr.png" }, { name: "Adegas climatizadas", img: "/images/marcas/liebherr-adega.webp" }, { name: "Frigobar", img: "/images/frigobar/liebherr.png" }],
     intro: [
       "A Mastermaq oferece serviço especializado Liebherr em Belo Horizonte, referência alemã em refrigeração de alto padrão. Atuamos no conserto de geladeiras de embutir, adegas climatizadas, freezers e refrigeradores premium da marca, com diagnóstico preciso e reparação técnica de alto nível.",
       "Os equipamentos Liebherr possuem tecnologias como BioFresh, NoFrost e controle eletrônico de temperatura por zona. Trabalhamos com práticas alinhadas ao padrão europeu de qualidade para preservar o desempenho, a tecnologia e a sofisticação de cada produto.",
@@ -109,7 +109,7 @@ export const BRAND_PAGES = [
     name: "Invisacook",
     label: "Autorizada Invisacook",
     logo: "/images/assets/invisacook-logo.png",
-    products: ["Cooktops de indução invisíveis", "Módulos de indução sob bancada", "Controles e painéis de comando Invisacook"],
+    products: [{ name: "Cooktop de indução invisível", img: "/images/marcas/invisacook-cooktop.webp" }, { name: "Módulo de indução sob bancada", img: "/images/marcas/invisacook-modulo.webp" }],
     intro: [
       "Atuamos no diagnóstico e conserto de cooktops de indução invisíveis Invisacook em Belo Horizonte. Oferecemos atendimento especializado e cuidadoso, com foco em preservar as características originais do equipamento e da bancada onde ele está instalado.",
       "O sistema Invisacook fica embaixo da pedra, criando uma superfície contínua e elegante na cozinha. Esse tipo de instalação exige conhecimento técnico específico de indução, ventilação e comando eletrônico, além de muito cuidado para não danificar o porcelanato ou a pedra da bancada durante o reparo.",
@@ -122,7 +122,7 @@ export const BRAND_PAGES = [
     name: "Viking",
     label: "Autorizada Viking",
     logo: "/images/assets/viking-logo.png",
-    products: ["Fogões e ranges profissionais", "Cooktops e rangetops", "Fornos de parede", "Refrigeradores e adegas", "Coifas", "Lava-louças", "Churrasqueiras"],
+    products: [{ name: "Cooktops e rangetops", img: "/images/cooktops/viking.png" }, { name: "Fornos", img: "/images/forno-eletrico/viking.png" }, { name: "Coifas", img: "/images/coifas/viking.png" }, { name: "Micro-ondas", img: "/images/microondas/viking.png" }, { name: "Lava-louças", img: "/images/lava-loucas/viking.png" }, { name: "Frigobar", img: "/images/frigobar/viking.png" }, { name: "Máquina de gelo", img: "/images/maquina-de-gelo/viking.png" }],
     intro: [
       "Atuamos no conserto de fogões, cooktops, rangetops, fornos, refrigeradores, adegas, coifas, lava-louças e churrasqueiras Viking em Belo Horizonte. Nosso atendimento é especializado e cuidadoso, com atenção à preservação das características originais de cada aparelho.",
       "A Viking é uma marca americana de padrão profissional, com equipamentos robustos e de alta potência. Queimadores de alto rendimento, fornos de convecção e refrigeração de embutir exigem técnicos experientes, ferramentas adequadas e reposição de peças originais.",
@@ -135,7 +135,7 @@ export const BRAND_PAGES = [
     name: "Daikin",
     label: "Autorizada Daikin",
     logo: "/images/assets/daikin-logo.png",
-    products: ["Ar-condicionado Split residencial", "Multi Split", "SkyAir (comercial)", "Sistemas VRV", "Equipamentos inverter"],
+    products: [{ name: "Split residencial", img: "/images/marcas/daikin-split.webp" }, { name: "SkyAir cassete", img: "/images/marcas/daikin-cassete.webp" }, { name: "Sistemas VRV", img: "/images/marcas/daikin-vrv.webp" }],
     intro: [
       "Atuamos no diagnóstico e reparo de ar-condicionado Daikin residencial e comercial em Belo Horizonte, incluindo sistemas Split, Multi Split, SkyAir e VRV, conforme o modelo. Oferecemos atendimento técnico especializado e cuidadoso, voltado ao desempenho e à preservação do equipamento.",
       "A Daikin é líder mundial em climatização, com tecnologia inverter de alta eficiência. Avaliamos carga de fluido refrigerante, placas eletrônicas, sensores, compressores e drenagem com instrumentos apropriados, garantindo conforto térmico e economia de energia após o reparo.",
@@ -148,7 +148,7 @@ export const BRAND_PAGES = [
     name: "Elettromec",
     label: "Autorizada Elettromec",
     logo: "/images/assets/elettromec-logo.png",
-    products: ["Cooktops a gás e de indução", "Fogões", "Fornos elétricos e a gás", "Coifas", "Refrigeradores e adegas", "Lava-louças"],
+    products: [{ name: "Cooktops", img: "/images/marcas/elettromec-cooktop.webp" }, { name: "Fornos", img: "/images/marcas/elettromec-forno.webp" }, { name: "Coifas", img: "/images/marcas/elettromec-coifa.webp" }, { name: "Adegas", img: "/images/marcas/elettromec-adega.webp" }],
     intro: [
       "Atuamos no conserto de eletrodomésticos Elettromec em Belo Horizonte, como cooktops, fogões, fornos, coifas, refrigeradores, adegas e lava-louças. Oferecemos serviço especializado, com cuidado para preservar as características originais do aparelho.",
       "A Elettromec combina design italiano e tecnologia para cozinhas gourmet. Nossos técnicos conhecem a linha completa da marca e realizam desde a regulagem de queimadores até o reparo de placas de indução, sistemas de refrigeração e bombas de lava-louças.",
@@ -161,7 +161,7 @@ export const BRAND_PAGES = [
     name: "Tecno",
     label: "Autorizada Tecno",
     logo: "/images/assets/tecno-logo.png",
-    products: ["Refrigeradores de embutir", "Adegas e cervejeiras", "Fornos e cooktops", "Coifas", "Gavetas aquecidas", "Máquinas de gelo"],
+    products: [{ name: "Cervejeira", img: "/images/cervejeira/tecno.png" }, { name: "Frigobar", img: "/images/frigobar/tecno.png" }, { name: "Cooktops", img: "/images/cooktops/tecno.png" }, { name: "Forno elétrico", img: "/images/forno-eletrico/tecno.png" }, { name: "Coifas", img: "/images/coifas/tecno.png" }, { name: "Micro-ondas", img: "/images/microondas/tecno.png" }, { name: "Lava-louças", img: "/images/lava-loucas/tecno.png" }, { name: "Máquina de gelo", img: "/images/maquina-de-gelo/tecno.png" }],
     intro: [
       "Atuamos no conserto de eletrodomésticos Tecno em Belo Horizonte, como refrigeradores, adegas, cervejeiras, fornos, cooktops, coifas, gavetas aquecidas e máquinas de gelo. Oferecemos atendimento especializado, com atenção à preservação das características originais do aparelho.",
       "A Tecno é especialista em eletrodomésticos de embutir para cozinhas e áreas gourmet. Cervejeiras e máquinas de gelo, por exemplo, exigem conhecimento de refrigeração, controle eletrônico e sistema hidráulico — áreas em que nossa equipe tem ampla experiência.",

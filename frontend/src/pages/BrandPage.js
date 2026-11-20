@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { motion, useInView } from 'framer-motion';
 import { ArrowRight, Phone, ShieldCheck, Wrench, Home as HomeIcon } from 'lucide-react';
+import { BrandProducts, BrandFaq } from '@/components/BrandSections';
 import { Button } from '@/components/ui/button';
 import SchedulingModal from '@/components/SchedulingModal';
 import { BRAND_PAGES, findBrandPage } from '@/data/brandPages';
@@ -28,8 +29,7 @@ const Hero = ({ b, onCta }) => (
   <section className="relative bg-white overflow-hidden border-b border-slate-200" data-testid="brand-hero">
     <div className="absolute pointer-events-none top-0 right-0 w-1/2 h-full" style={{ background: 'radial-gradient(ellipse at 90% 20%, rgba(0,76,255,0.05) 0%, transparent 55%)' }} />
     <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-        <div className="lg:col-span-7">
+      <div className="max-w-3xl">
           <motion.img src={b.logo} alt={`Logo ${b.name}`} className="h-9 sm:h-10 w-auto max-w-[200px] object-contain object-left mb-8"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} data-testid="brand-hero-logo" />
           <motion.h1 className="font-heading text-[2rem] sm:text-[2.5rem] lg:text-[3rem] font-bold tracking-tight text-slate-900 leading-[1.12] mb-4"
@@ -49,18 +49,6 @@ const Hero = ({ b, onCta }) => (
               <Phone className="w-4 h-4" /> (31) 3422-5293
             </a>
           </motion.div>
-        </div>
-        <motion.div className="lg:col-span-5" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7, delay: 0.1 }}>
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-3">Linha atendida</p>
-          <ul className="border-t border-slate-200" data-testid="brand-page-products">
-            {b.products.map((p, i) => (
-              <li key={p} className="flex items-baseline gap-4 py-3.5 border-b border-slate-200">
-                <span className="font-heading text-xs text-slate-300 w-5">{String(i + 1).padStart(2, '0')}</span>
-                <span className="text-sm text-slate-700">{p}</span>
-              </li>
-            ))}
-          </ul>
-        </motion.div>
       </div>
       <div className="grid grid-cols-3 gap-6 mt-14 pt-8 border-t border-slate-200">
         {[{ num: "30+", label: "Anos de experiência" }, { num: "28 mil", label: "Clientes atendidos" }, { num: "90 dias", label: "De garantia" }].map((s) => (
@@ -236,12 +224,14 @@ export default function BrandPage() {
   return (
     <div className="bg-white" data-testid={`brand-page-${b.slug}`}>
       <Hero b={b} onCta={open} />
+      <BrandProducts b={b} />
       <article>
         <About b={b} />
         <Defects b={b} />
         <Why b={b} />
         <Steps />
         <CareAndRegion b={b} />
+        <BrandFaq b={b} />
       </article>
       <FinalCta b={b} onCta={open} />
       <OtherBrands current={b.slug} />

@@ -17,7 +17,7 @@ const SEO_MAP = [
       const b = findBrandPage(p.split("/")[2]);
       return {
         title: `${b.label} em BH — Conserto ${b.name} | Mastermaq`,
-        description: `${b.label} em Belo Horizonte: conserto e manutenção de ${b.products.slice(0, 3).join(", ").toLowerCase()} ${b.name} com peças originais e garantia de 90 dias.`,
+        description: `${b.label} em Belo Horizonte: conserto e manutenção de ${b.products.slice(0, 3).map((x) => x.name).join(", ").toLowerCase()} ${b.name} com peças originais e garantia de 90 dias.`,
         keywords: `${b.label.toLowerCase()} BH, assistência técnica ${b.name} Belo Horizonte, conserto ${b.name} BH, ${b.name} autorizada, ` + BASE_KEYWORDS,
       };
     },
